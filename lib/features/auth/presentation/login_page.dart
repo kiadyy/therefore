@@ -2,6 +2,8 @@
 import 'package:flutter/services.dart';
 
 import '../../../core/constants/app_colors.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../main.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -26,29 +28,44 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
-    FocusScope.of(context).unfocus();
+ Future<void> _handleLogin() async {
+  FocusScope.of(context).unfocus();
 
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
 
-    try {
-      await Future.delayed(const Duration(seconds: 1));
+  try {
+    // ⚠️ Pour l'instant, Supabase Auth attend un email.
+    // Étape suivante possible : convertir l'identifiant ID en email en interne,
+    // ou passer par une table de correspondance. Pour tester, utilise
+    // directement un email dans le champ "Identifiant ID" (ex: test@therefore.com).
+    final response = await supabase.auth.signInWithPassword(
+      email: _idController.text.trim(),
+      password: _passwordController.text,
+    );
 
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/dashboard');
-    } catch (e) {
-      setState(() {
-        _errorMessage = "Identifiant ou mot de passe incorrect.";
-      });
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+    if (response.user == null) {
+      throw Exception('Échec de connexion');
     }
+
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed('/dashboard');
+  } on AuthException catch (e) {
+    setState(() {
+      _errorMessage = "Identifiant ou mot de passe incorrect.";
+    });
+  } catch (e) {
+    setState(() {
+      _errorMessage = "Une erreur est survenue. Réessaie.";
+    });
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +115,8 @@ class _LoginPageState extends State<LoginPage> {
                               color: AppColors.textGrey,
                             ),
                             onPressed: () {
-                              setState(() => _obscurePassword = !_obscurePassword);
+                              setState(
+                                  () => _obscurePassword = !_obscurePassword);
                             },
                           ),
                         ),
@@ -107,11 +125,19 @@ class _LoginPageState extends State<LoginPage> {
                           Text(
                             _errorMessage!,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.red, fontSize: 13),
+                            style: const TextStyle(
+                                color: Colors.red, fontSize: 13),
                           ),
                         ],
                         const SizedBox(height: 32),
-                        _buildLoginButton(),
+                        Align(
+                          alignment: Alignment.center,
+                          child: FractionallySizedBox(
+                            widthFactor:
+                                0.7, // 70% de la largeur disponible — ajuste ce chiffre
+                            child: _buildLoginButton(),
+                          ),
+                        ),
                         const Spacer(flex: 3),
                       ],
                     ),
@@ -138,16 +164,6 @@ class _LoginPageState extends State<LoginPage> {
               fontWeight: FontWeight.bold,
               color: AppColors.textGrey,
             ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'PEOPLE   PROCESS   INFORMATION',
-          style: TextStyle(
-            fontSize: 9,
-            letterSpacing: 1.2,
-            color: AppColors.textGrey,
-            fontWeight: FontWeight.w600,
           ),
         ),
       ],
@@ -180,7 +196,8 @@ class _LoginPageState extends State<LoginPage> {
         filled: true,
         fillColor: AppColors.fieldGrey,
         suffixIcon: suffixIcon,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(28),
           borderSide: BorderSide.none,
@@ -216,7 +233,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               )
             : const Text(
-                'Se connecter',
+                'se connecter',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
       ),
