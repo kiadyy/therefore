@@ -28,49 +28,49 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
- Future<void> _handleLogin() async {
-  FocusScope.of(context).unfocus();
+  Future<void> _handleLogin() async {
+    FocusScope.of(context).unfocus();
 
-  if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-  });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-  try {
-    // ⚠️ Pour l'instant, Supabase Auth attend un email.
-    // Étape suivante possible : convertir l'identifiant ID en email en interne,
-    // ou passer par une table de correspondance. Pour tester, utilise
-    // directement un email dans le champ "Identifiant ID" (ex: test@therefore.com).
-    final response = await supabase.auth.signInWithPassword(
-      email: _idController.text.trim(),
-      password: _passwordController.text,
-    );
+    try {
+      // ⚠️ Pour l'instant, Supabase Auth attend un email.
+      // Étape suivante possible : convertir l'identifiant ID en email en interne,
+      // ou passer par une table de correspondance. Pour tester, utilise
+      // directement un email dans le champ "Identifiant ID" (ex: test@therefore.com).
+      final response = await supabase.auth.signInWithPassword(
+        email: _idController.text.trim(),
+        password: _passwordController.text,
+      );
 
-    if (response.user == null) {
-      throw Exception('Échec de connexion');
+      if (response.user == null) {
+        throw Exception('Échec de connexion');
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed('/dashboard');
+    } on AuthException catch (e) {
+      setState(() {
+        _errorMessage = "Identifiant ou mot de passe incorrect.";
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = "Une erreur est survenue. Réessaie.";
+      });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-
-    if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/dashboard');
-  } on AuthException catch (e) {
-    setState(() {
-      _errorMessage = "Identifiant ou mot de passe incorrect.";
-    });
-  } catch (e) {
-    setState(() {
-      _errorMessage = "Une erreur est survenue. Réessaie.";
-    });
-  } finally {
-    if (mounted) setState(() => _isLoading = false);
   }
-}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: const Color(0xFFF7F7F7),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -91,15 +91,15 @@ class _LoginPageState extends State<LoginPage> {
                           'Authentification',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
                             color: AppColors.textDark,
                           ),
                         ),
                         const SizedBox(height: 32),
                         _buildTextField(
                           controller: _idController,
-                          hint: 'Identifiant ID',
+                          hint: 'Identifiant AD',
                           obscure: false,
                         ),
                         const SizedBox(height: 16),
@@ -154,18 +154,22 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildLogo() {
     return Column(
       children: [
-        Image.asset(
-          'assets/images/logo_therefore.png',
-          height: 60,
-          errorBuilder: (context, error, stackTrace) => const Text(
-            'Therefore',
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textGrey,
-            ),
-          ),
-        ),
+        SizedBox(
+  width: double.infinity, // même largeur que les champs (qui prennent toute la largeur dispo)
+  child: Image.asset(
+    'assets/images/logo_therefore.png',
+    fit: BoxFit.contain,
+    errorBuilder: (context, error, stackTrace) => const Text(
+      'Therefore',
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        fontSize: 36,
+        fontWeight: FontWeight.bold,
+        color: AppColors.textGrey,
+      ),
+    ),
+  ),
+),
       ],
     );
   }
