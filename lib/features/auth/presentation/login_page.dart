@@ -1,9 +1,12 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../../../core/constants/app_colors.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../main.dart';
+import '../../../data/service/session_manager.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -43,17 +46,52 @@ class _LoginPageState extends State<LoginPage> {
       // Étape suivante possible : convertir l'identifiant ID en email en interne,
       // ou passer par une table de correspondance. Pour tester, utilise
       // directement un email dans le champ "Identifiant ID" (ex: test@therefore.com).
-      final response = await supabase.auth.signInWithPassword(
-        email: _idController.text.trim(),
-        password: _passwordController.text,
+      // final response = await supabase.auth.signInWithPassword(
+      //   email: _idController.text.trim(),
+      //   password: _passwordController.text,
+      // );
+      // if (response.user == null) {
+      //   throw Exception('Échec de connexion');
+      // }
+
+      // if (!mounted) return;
+      // Navigator.of(context).pushReplacementNamed('/dashboard');
+
+      final url =
+          Uri.parse('http://172.16.112.76/theservice/v0001/restun/GetJWTToken');
+      final username = _idController.text.trim();
+      final password = _passwordController.text;
+
+      final identifiant = 'SMTP-GROUP\\$username';
+      final credentials = base64Encode(utf8.encode('$identifiant:$password'));
+
+      final responseTherefore = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Basic $credentials',
+        },
+        body: jsonEncode({}),
       );
 
-      if (response.user == null) {
-        throw Exception('Échec de connexion');
-      }
+      if (responseTherefore.statusCode == 200) {
+        // Succès de la connexion
+        final data = jsonDecode(responseTherefore.body);
+        final token = data['JWTToken'];
+        if (token != null) {
+          await SessionManager.saveSession(token, username: username);
+        }
+        // Le token se trouve probablement dans 'data' (ex: data['Token_JWT'])
+        // Tu peux le stocker ici pour tes futures requêtes.
 
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/dashboard');
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed('/dashboard');
+      } else {
+        setState(() {
+          _errorMessage = "Identifiant ou mot de passe incorrect.";
+        });
+      }
     } on AuthException catch (e) {
       setState(() {
         _errorMessage = "Identifiant ou mot de passe incorrect.";
@@ -155,21 +193,22 @@ class _LoginPageState extends State<LoginPage> {
     return Column(
       children: [
         SizedBox(
-  width: double.infinity, // même largeur que les champs (qui prennent toute la largeur dispo)
-  child: Image.asset(
-    'assets/images/logo_therefore.png',
-    fit: BoxFit.contain,
-    errorBuilder: (context, error, stackTrace) => const Text(
-      'Therefore',
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: 36,
-        fontWeight: FontWeight.bold,
-        color: AppColors.textGrey,
-      ),
-    ),
-  ),
-),
+          width: double
+              .infinity, // même largeur que les champs (qui prennent toute la largeur dispo)
+          child: Image.asset(
+            'assets/images/logo_therefore.png',
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => const Text(
+              'Therefore',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textGrey,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

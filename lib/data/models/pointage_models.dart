@@ -8,11 +8,11 @@ class PointageJour {
   PointageJour({this.entree, this.sortie, required this.annee, required this.mois});
 
   factory PointageJour.fromJson(Map<String, dynamic> json) => PointageJour(
-    entree: json['entree'] as String?,
-    sortie: json['sortie'] as String?,
-    annee: json['annee'] as int,
-    mois: json['mois'] as int,
-  );
+        entree: json['entree'] as String?,
+        sortie: json['sortie'] as String?,
+        annee: json['annee'] as int,
+        mois: json['mois'] as int,
+      );
 }
 
 /// Total d'heures réalisées : {total_heures: 150.66, annee: 2026}
@@ -23,23 +23,24 @@ class TotalHeures {
   TotalHeures({required this.totalHeures, required this.annee});
 
   factory TotalHeures.fromJson(Map<String, dynamic> json) => TotalHeures(
-    totalHeures: (json['total_heures'] as num).toDouble(),
-    annee: json['annee'] as int,
-  );
+        totalHeures: (json['total_heures'] as num).toDouble(),
+        annee: json['annee'] as int,
+      );
 }
 
 /// Infos employé + stats : {MATRICULE, NOM, SOCIETE, PRENOM, duree_moyenne_retard,
 /// duree_moyenne_travail, nb_retards} + classement fourni séparément (index/length)
+
 class EmployeStats {
   final String matricule;
   final String nom;
   final String prenom;
   final String societe;
-  final double dureeMoyenneRetard; // en minutes
-  final double dureeMoyenneTravail; // en heures
+  final String dureeMoyenneRetard; // format "HH:mm:ss"
+  final String dureeMoyenneTravail; // format "HH:mm:ss"
   final int nbRetards;
-  final int classementIndex; // ex: 7
-  final int classementTotal; // ex: 10
+  final int classementIndex;
+  final int classementTotal;
 
   EmployeStats({
     required this.matricule,
@@ -54,17 +55,17 @@ class EmployeStats {
   });
 
   factory EmployeStats.fromJson(
-      Map<String, dynamic> emp, {
-        required int index,
-        required int length,
-      }) =>
+    Map<String, dynamic> emp, {
+    required int index,
+    required int length,
+  }) =>
       EmployeStats(
         matricule: emp['MATRICULE'].toString(),
         nom: emp['NOM'] as String,
         prenom: emp['PRENOM'] as String,
         societe: emp['SOCIETE'] as String,
-        dureeMoyenneRetard: (emp['duree_moyenne_retard'] as num).toDouble(),
-        dureeMoyenneTravail: (emp['duree_moyenne_travail'] as num).toDouble(),
+        dureeMoyenneRetard: emp['duree_moyenne_retard'].toString(),
+        dureeMoyenneTravail: emp['duree_moyenne_travail'].toString(),
         nbRetards: (emp['nb_retards'] as num).toInt(),
         classementIndex: index,
         classementTotal: length,
@@ -79,24 +80,33 @@ class PointageEvent {
   PointageEvent({required this.datePointage, this.refDemande});
 
   factory PointageEvent.fromJson(Map<String, dynamic> json) => PointageEvent(
-    datePointage: DateTime.parse(json['date_pointage'] as String),
-    refDemande: json['ref_demande'] as String?,
-  );
+        datePointage: DateTime.parse(json['date_pointage'] as String),
+        refDemande: json['ref_demande'] as String?,
+      );
 }
 
-/// Regroupement des événements par jour, pour affichage dans l'historique
+/// Regroupement des événements par jour. Peut contenir de 0 à 4 pointages
+/// (matin, avant-repas, après-repas, soir), selon ce que l'employé a réellement
+/// pointé ce jour-là.
 class JourPointage {
   final DateTime date;
-  final DateTime? entree;
-  final DateTime? sortie;
+  final List<DateTime> pointages; // triés du plus tôt au plus tard
   final bool estWeekend;
 
-  JourPointage({required this.date, this.entree, this.sortie, required this.estWeekend});
+  JourPointage({
+    required this.date,
+    required this.pointages,
+    required this.estWeekend,
+  });
 
+  /// - weekend : jour non ouvré, peu importe les pointages
+  /// - absent : aucun pointage ce jour (et pas un weekend)
+  /// - incomplet : nombre de pointages impair (1 ou 3) → une session non terminée
+  /// - complet : nombre de pointages pair (2 ou 4) → toutes les sessions closes
   String get statut {
     if (estWeekend) return 'weekend';
-    if (entree != null && sortie != null) return 'complet';
-    if (entree != null) return 'incomplet';
-    return 'absent';
+    if (pointages.isEmpty) return 'absent';
+    if (pointages.length.isOdd) return 'incomplet';
+    return 'complet';
   }
 }

@@ -44,27 +44,23 @@ class _HistoryBodyState extends State<HistoryBody> {
         fin: _dateFin,
       );
 
-      final Map<String, List<PointageEvent>> parJour = {};
+      // Regroupe tous les événements bruts par jour, triés du plus tôt au plus tard
+      final Map<String, List<DateTime>> parJour = {};
       for (final e in events) {
         final key = DateFormat('yyyy-MM-dd').format(e.datePointage);
-        parJour.putIfAbsent(key, () => []).add(e);
+        parJour.putIfAbsent(key, () => []).add(e.datePointage);
+      }
+      for (final list in parJour.values) {
+        list.sort();
       }
 
       final jours = <JourPointage>[];
       for (var d = _dateDebut; !d.isAfter(_dateFin); d = d.add(const Duration(days: 1))) {
         final key = DateFormat('yyyy-MM-dd').format(d);
         final estWeekend = d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
-        final evts = parJour[key];
+        final pointages = parJour[key] ?? [];
 
-        DateTime? entree;
-        DateTime? sortie;
-        if (evts != null && evts.isNotEmpty) {
-          evts.sort((a, b) => a.datePointage.compareTo(b.datePointage));
-          entree = evts.first.datePointage;
-          if (evts.length > 1) sortie = evts.last.datePointage;
-        }
-
-        jours.add(JourPointage(date: d, entree: entree, sortie: sortie, estWeekend: estWeekend));
+        jours.add(JourPointage(date: d, pointages: pointages, estWeekend: estWeekend));
       }
 
       jours.sort((a, b) => b.date.compareTo(a.date));
@@ -283,13 +279,12 @@ class _JourCard extends StatelessWidget {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
           ),
           const SizedBox(height: 10),
-          if (jour.entree != null || jour.sortie != null)
-            Row(
-              children: [
-                if (jour.entree != null) _TimeBadge(time: jour.entree!),
-                if (jour.entree != null && jour.sortie != null) const SizedBox(width: 8),
-                if (jour.sortie != null) _TimeBadge(time: jour.sortie!),
-              ],
+          if (jour.pointages.isNotEmpty)
+            // Affiche chaque pointage réel du jour (2 ou 4 selon les cas), dans l'ordre
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: jour.pointages.map((h) => _TimeBadge(time: h)).toList(),
             )
           else
             Text(
