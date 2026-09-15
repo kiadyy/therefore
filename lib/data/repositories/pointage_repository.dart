@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import "../service/session_manager.dart";
+import '../session/session_expired_exception.dart';
 
 /// Contrat que l'app utilise partout. Peu importe la source réelle des données
 /// (mock aujourd'hui, API de l'entreprise demain), le reste du code ne change pas.
@@ -33,7 +34,7 @@ class MockPointageRepository implements PointageRepository {
     final token = await SessionManager.getToken();
 
     final url = Uri.parse(
-      'http://10.114.0.16:8000/user/heure-arrivee'
+      'https://pointeuse-backend.inviso-group.mg/user/heure-arrivee'
       '?mois=$mois&annee=$annee',
     );
     final response = await http.get(
@@ -54,7 +55,7 @@ class MockPointageRepository implements PointageRepository {
       );
     } else if (response.statusCode == 401) {
       // Token expiré ou invalide
-      throw Exception('Session expirée, veuillez vous reconnecter');
+      throw const SessionExpiredException();
     } else {
       throw Exception(
         'Erreur lors de la récupération du pointage (${response.statusCode})',
@@ -74,7 +75,7 @@ class MockPointageRepository implements PointageRepository {
     final token = await SessionManager.getToken();
 
     final url = Uri.parse(
-      'http://10.114.0.16:8000/user/heure-realise'
+      'https://pointeuse-backend.inviso-group.mg/user/heure-realise'
       '?mois=$mois&annee=$annee',
     );
     final response = await http.get(
@@ -91,7 +92,7 @@ class MockPointageRepository implements PointageRepository {
           totalHeures: data['total_heures'], annee: data['annee']);
     } else if (response.statusCode == 401) {
       // Token expiré ou invalide
-      throw Exception('Session expirée, veuillez vous reconnecter');
+      throw const SessionExpiredException();
     } else {
       throw Exception(
         'Erreur lors de la récupération du pointage (${response.statusCode})',
@@ -110,8 +111,8 @@ class MockPointageRepository implements PointageRepository {
     final token = await SessionManager.getToken();
 
     final url = Uri.parse(
-      'http://10.114.0.16:8000/user/my-retards'
-      '?mois=$mois&annee=$annee',
+      'https://pointeuse-backend.inviso-group.mg/user/my-retards'
+      '?mois=$mois&annee=$annee&order=asc',
     );
     final response = await http.get(
       url,
@@ -137,7 +138,7 @@ class MockPointageRepository implements PointageRepository {
       );
     } else if (response.statusCode == 401) {
       // Token expiré ou invalide
-      throw Exception('Session expirée, veuillez vous reconnecter');
+      throw const SessionExpiredException();
     } else {
       throw Exception(
         'Erreur lors de la récupération du pointage (${response.statusCode})',
@@ -170,7 +171,7 @@ class MockPointageRepository implements PointageRepository {
     final date_debut = DateFormat('yyyy-MM-dd').format(debut);
     final date_fin = DateFormat('yyyy-MM-dd').format(fin);
     final url = Uri.parse(
-      'http://10.114.0.16:8000/presence/historique'
+      'https://pointeuse-backend.inviso-group.mg/presence/historique'
       '?date_debut=$date_debut&date_fin=$date_fin',
     );
     final response = await http.get(

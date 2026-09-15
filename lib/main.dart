@@ -1,28 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/constants/app_colors.dart';
+import 'data/service/session_manager.dart';
 import 'features/auth/presentation/login_page.dart';
 import 'features/shell/presentation/main_shell.dart';
 
-
-const String supabaseUrl = 'https://hwczpzhtmuoltelopbes.supabase.co';
-const String supabaseAnonKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3Y3pwemh0bXVvbHRlbG9wYmVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxNTM5MjksImV4cCI6MjEwMzcyOTkyOX0.YPWOW9pTN_KVFeA_CYSKCNTrmDm67svFaCRkkBoxP80';
-
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  await Supabase.initialize(
-    url: supabaseUrl,
-    anonKey: supabaseAnonKey,
-  );
-
+void main() {
   runApp(const TherefereApp());
 }
-
-// Raccourci pratique utilisé partout dans l'app pour accéder au client Supabase
-final supabase = Supabase.instance.client;
 
 class TherefereApp extends StatelessWidget {
   const TherefereApp({super.key});
@@ -32,6 +17,9 @@ class TherefereApp extends StatelessWidget {
     return MaterialApp(
       title: 'Therefore',
       debugShowCheckedModeBanner: false,
+      routes: {
+        '/dashboard': (context) => MainShell(),
+      },
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: AppColors.backgroundLight,
@@ -41,11 +29,20 @@ class TherefereApp extends StatelessWidget {
         ),
         fontFamily: 'Jost',
       ),
-      initialRoute: '/login',
-      routes: {
-        '/login': (context) => const LoginPage(),
-        '/dashboard': (context) => const MainShell(),
-      },
+      home: FutureBuilder<bool>(
+        future: SessionManager.isLoggedIn(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          // Le matricule n'est pas utilisé par les appels API (le backend
+          // identifie l'utilisateur via le token), donc une valeur fixe suffit ici.
+          final bool connecte = snapshot.data ?? false;
+          return connecte ? const MainShell() : const LoginPage();
+        },
+      ),
     );
   }
 }

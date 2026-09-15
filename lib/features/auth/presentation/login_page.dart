@@ -57,8 +57,8 @@ class _LoginPageState extends State<LoginPage> {
       // if (!mounted) return;
       // Navigator.of(context).pushReplacementNamed('/dashboard');
 
-      final url =
-          Uri.parse('http://172.16.112.76/theservice/v0001/restun/GetJWTToken');
+      final url = Uri.parse(
+          'https://therefore.inviso-group.mg/theservice/v0001/restun/GetJWTToken');
       final username = _idController.text.trim();
       final password = _passwordController.text;
 
@@ -97,8 +97,10 @@ class _LoginPageState extends State<LoginPage> {
         _errorMessage = "Identifiant ou mot de passe incorrect.";
       });
     } catch (e) {
+      print("tonga ");
+      print(e);
       setState(() {
-        _errorMessage = "Une erreur est survenue. Réessaie.";
+        _errorMessage = "Une erreur est survenue. Réessaie....";
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -196,7 +198,7 @@ class _LoginPageState extends State<LoginPage> {
           width: double
               .infinity, // même largeur que les champs (qui prennent toute la largeur dispo)
           child: Image.asset(
-            'assets/images/logo_therefore.png',
+            'assets/images/logo_therefore.PNG',
             fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) => const Text(
               'Therefore',

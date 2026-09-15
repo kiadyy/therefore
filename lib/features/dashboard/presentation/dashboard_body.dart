@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../data/repositories/pointage_repository_provider.dart';
+import '../../shared/logout_action.dart';
+import '../../../data/session/session_expired_exception.dart';
 
 const List<String> _moisNoms = [
   'Janvier',
@@ -51,17 +53,18 @@ class _DashboardBodyState extends State<DashboardBody> {
     _selectedMonth = now.month;
     _loadDashboardData();
   }
+
   double _hmsToMinutes(String value) {
-  final parts = value.split(':');
+    final parts = value.split(':');
 
-  if (parts.length != 3) return 0;
+    if (parts.length != 3) return 0;
 
-  final heures = double.tryParse(parts[0]) ?? 0;
-  final minutes = double.tryParse(parts[1]) ?? 0;
-  final secondes = double.tryParse(parts[2]) ?? 0;
+    final heures = double.tryParse(parts[0]) ?? 0;
+    final minutes = double.tryParse(parts[1]) ?? 0;
+    final secondes = double.tryParse(parts[2]) ?? 0;
 
-  return heures * 60 + minutes + secondes / 60;
-}
+    return heures * 60 + minutes + secondes / 60;
+  }
 
   Future<void> _loadDashboardData() async {
     setState(() {
@@ -94,20 +97,22 @@ class _DashboardBodyState extends State<DashboardBody> {
         _nbRetards = stats.nbRetards;
         _classementIndex = stats.classementIndex;
         _classementTotal = stats.classementTotal;
-       _dureeMoyenneRetardMin =
-    _hmsToMinutes(stats.dureeMoyenneRetard);
+        _dureeMoyenneRetardMin = _hmsToMinutes(stats.dureeMoyenneRetard);
 
-_dureeMoyenneTravailH =
-    _hmsToMinutes(stats.dureeMoyenneTravail) / 60;
+        _dureeMoyenneTravailH = _hmsToMinutes(stats.dureeMoyenneTravail) / 60;
         _isLoading = false;
       });
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = 'Impossible de charger les données.';
-        _isLoading = false;
-      });
-    }
+  if (e is SessionExpiredException) {
+    if (mounted) forceLogout(context);
+    return;
+  }
+  if (!mounted) return;
+  setState(() {
+    _errorMessage = 'Impossible de charger les données.';
+    _isLoading = false;
+  });
+}
   }
 
   String _formatMinutesToHms(double minutes) {
@@ -266,36 +271,39 @@ _dureeMoyenneTravailH =
           color: AppColors.primaryGreen,
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: InkWell(
-              onTap: _openMonthPicker,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.calendar_month,
-                        color: Colors.white, size: 18),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${_moisNoms[_selectedMonth - 1]} $_selectedYear',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13),
-                    ),
-                    const Icon(Icons.arrow_drop_down, color: Colors.white),
-                  ],
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              InkWell(
+                onTap: _openMonthPicker,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.calendar_month,
+                          color: Colors.white, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${_moisNoms[_selectedMonth - 1]} $_selectedYear',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13),
+                      ),
+                      const Icon(Icons.arrow_drop_down, color: Colors.white),
+                    ],
+                  ),
                 ),
               ),
-            ),
+              const LogoutIconButton(),
+            ],
           ),
         ),
         Expanded(

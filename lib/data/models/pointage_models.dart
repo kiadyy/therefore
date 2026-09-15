@@ -88,6 +88,9 @@ class PointageEvent {
 /// Regroupement des événements par jour. Peut contenir de 0 à 4 pointages
 /// (matin, avant-repas, après-repas, soir), selon ce que l'employé a réellement
 /// pointé ce jour-là.
+/// Regroupement des événements par jour. Peut contenir de 0 à 4 pointages
+/// (matin, avant-repas, après-repas, soir), selon ce que l'employé a réellement
+/// pointé ce jour-là.
 class JourPointage {
   final DateTime date;
   final List<DateTime> pointages; // triés du plus tôt au plus tard

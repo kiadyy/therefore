@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/pointage_models.dart';
 import '../../../data/repositories/pointage_repository_provider.dart';
+import '../../shared/logout_action.dart';
+import '../../../data/session/session_expired_exception.dart';
 
 class HistoryBody extends StatefulWidget {
   final String matricule;
@@ -44,7 +46,6 @@ class _HistoryBodyState extends State<HistoryBody> {
         fin: _dateFin,
       );
 
-      // Regroupe tous les événements bruts par jour, triés du plus tôt au plus tard
       final Map<String, List<DateTime>> parJour = {};
       for (final e in events) {
         final key = DateFormat('yyyy-MM-dd').format(e.datePointage);
@@ -55,12 +56,16 @@ class _HistoryBodyState extends State<HistoryBody> {
       }
 
       final jours = <JourPointage>[];
-      for (var d = _dateDebut; !d.isAfter(_dateFin); d = d.add(const Duration(days: 1))) {
+      for (var d = _dateDebut;
+          !d.isAfter(_dateFin);
+          d = d.add(const Duration(days: 1))) {
         final key = DateFormat('yyyy-MM-dd').format(d);
-        final estWeekend = d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
+        final estWeekend =
+            d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
         final pointages = parJour[key] ?? [];
 
-        jours.add(JourPointage(date: d, pointages: pointages, estWeekend: estWeekend));
+        jours.add(JourPointage(
+            date: d, pointages: pointages, estWeekend: estWeekend));
       }
 
       jours.sort((a, b) => b.date.compareTo(a.date));
@@ -71,9 +76,13 @@ class _HistoryBodyState extends State<HistoryBody> {
         _isLoading = false;
       });
     } catch (e) {
+      if (e is SessionExpiredException) {
+        if (mounted) forceLogout(context);
+        return;
+      }
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Impossible de charger l\'historique.';
+        _errorMessage = 'Impossible de charger les données.';
         _isLoading = false;
       });
     }
@@ -88,7 +97,9 @@ class _HistoryBodyState extends State<HistoryBody> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(primary: AppColors.primaryGreen),
+            colorScheme: Theme.of(context)
+                .colorScheme
+                .copyWith(primary: AppColors.primaryGreen),
           ),
           child: child!,
         );
@@ -119,63 +130,70 @@ class _HistoryBodyState extends State<HistoryBody> {
 
     return Column(
       children: [
+        // Même hauteur (70) et même structure Row que le bandeau du dashboard
         Container(
+          height: 70,
           color: AppColors.primaryGreen,
           width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-          child: Column(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Historique de pointage',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: InkWell(
-                      onTap: _pickDateRange,
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: InkWell(
+                        onTap: _pickDateRange,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.date_range,
+                                  color: Colors.white, size: 18),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  '${dateFormat.format(_dateDebut)} → ${dateFormat.format(_dateFin)}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: _resetToDefault,
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.date_range, color: Colors.white, size: 18),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                '${dateFormat.format(_dateDebut)}  →  ${dateFormat.format(_dateFin)}',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
+                        child: const Icon(Icons.restart_alt,
+                            color: Colors.white, size: 18),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: _resetToDefault,
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Icon(Icons.restart_alt, color: Colors.white, size: 20),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const LogoutIconButton(),
             ],
           ),
         ),
@@ -185,12 +203,15 @@ class _HistoryBodyState extends State<HistoryBody> {
               : _errorMessage != null
                   ? Center(child: Text(_errorMessage!))
                   : _jours.isEmpty
-                      ? const Center(child: Text('Aucun pointage sur cette période.'))
+                      ? const Center(
+                          child: Text('Aucun pointage sur cette période.'))
                       : ListView.separated(
                           padding: const EdgeInsets.all(16),
                           itemCount: _jours.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
-                          itemBuilder: (context, index) => _JourCard(jour: _jours[index]),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) =>
+                              _JourCard(jour: _jours[index]),
                         ),
         ),
       ],
@@ -204,7 +225,13 @@ class _JourCard extends StatelessWidget {
   const _JourCard({required this.jour});
 
   static const _joursSemaine = [
-    'LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI', 'DIMANCHE'
+    'LUNDI',
+    'MARDI',
+    'MERCREDI',
+    'JEUDI',
+    'VENDREDI',
+    'SAMEDI',
+    'DIMANCHE'
   ];
 
   @override
@@ -258,17 +285,25 @@ class _JourCard extends StatelessWidget {
             children: [
               Text(
                 nomJour,
-                style: const TextStyle(fontSize: 11, color: AppColors.textGrey, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textGrey,
+                    fontWeight: FontWeight.w600),
               ),
               Row(
                 children: [
                   Container(
                     width: 7,
                     height: 7,
-                    decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                        color: badgeColor, shape: BoxShape.circle),
                   ),
                   const SizedBox(width: 6),
-                  Text(badgeLabel, style: TextStyle(fontSize: 12, color: badgeColor, fontWeight: FontWeight.w600)),
+                  Text(badgeLabel,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: badgeColor,
+                          fontWeight: FontWeight.w600)),
                 ],
               ),
             ],
@@ -276,11 +311,13 @@ class _JourCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             dateStr,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
+            style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark),
           ),
           const SizedBox(height: 10),
           if (jour.pointages.isNotEmpty)
-            // Affiche chaque pointage réel du jour (2 ou 4 selon les cas), dans l'ordre
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -312,7 +349,8 @@ class _TimeBadge extends StatelessWidget {
       ),
       child: Text(
         DateFormat('H:mm').format(time),
-        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+            color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
