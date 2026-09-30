@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../data/repositories/pointage_repository_provider.dart';
 import '../../shared/logout_action.dart';
 import '../../../data/session/session_expired_exception.dart';
+import '../../../core/rules/stat_rules.dart' as rules;
 
 const List<String> _moisNoms = [
   'Janvier',
@@ -103,16 +104,16 @@ class _DashboardBodyState extends State<DashboardBody> {
         _isLoading = false;
       });
     } catch (e) {
-  if (e is SessionExpiredException) {
-    if (mounted) forceLogout(context);
-    return;
-  }
-  if (!mounted) return;
-  setState(() {
-    _errorMessage = 'Impossible de charger les données.';
-    _isLoading = false;
-  });
-}
+      if (e is SessionExpiredException) {
+        if (mounted) forceLogout(context);
+        return;
+      }
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Impossible de charger les données.';
+        _isLoading = false;
+      });
+    }
   }
 
   String _formatMinutesToHms(double minutes) {
@@ -123,21 +124,12 @@ class _DashboardBodyState extends State<DashboardBody> {
     return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  // Vert si peu de retards, orange à partir de 13, rouge à partir de 16
-  Color _classementColor(int nbRetards) {
-    if (nbRetards <= 12) return AppColors.success;
-    if (nbRetards <= 15) return const Color(0xFFF09517);
-    return Colors.red;
-  }
-
-  // Vert si retard moyen < 30min, orange entre 30min et 2h, rouge au-delà de 2h
   Color _dureeRetardColor(double minutes) {
     if (minutes > 120) return Colors.red;
     if (minutes >= 30) return const Color(0xFFF09517);
     return AppColors.success;
   }
 
-  // Rouge si moyenne de travail <= 4h, orange entre 4h et 7h, vert au-delà de 7h
   Color _dureeTravailColor(double heures) {
     if (heures <= 4) return Colors.red;
     if (heures <= 7) return const Color(0xFFF09517);
@@ -149,7 +141,6 @@ class _DashboardBodyState extends State<DashboardBody> {
     return 'Moyenne';
   }
 
-  // Rouge = Faible, jaune = Moyenne, vert = Élevé
   String _dureeTravailLabel(double heures) {
     if (heures <= 4) return 'Faible';
     if (heures <= 7) return 'Moyenne';
@@ -302,7 +293,7 @@ class _DashboardBodyState extends State<DashboardBody> {
                   ),
                 ),
               ),
-              const LogoutIconButton(),
+              const ProfileIconButton(),
             ],
           ),
         ),
@@ -358,7 +349,7 @@ class _DashboardBodyState extends State<DashboardBody> {
                                     caption: _classementTotal > 0
                                         ? '${_classementIndex}e sur $_classementTotal (Département)'
                                         : 'Pas de données',
-                                    dotColor: _classementColor(_nbRetards),
+                                    dotColor: rules.classementColor(_nbRetards),
                                   ),
                                 ),
                               ],
@@ -373,9 +364,9 @@ class _DashboardBodyState extends State<DashboardBody> {
                                     label: 'DURÉE MOYENNE RETARD',
                                     value: _formatMinutesToHms(
                                         _dureeMoyenneRetardMin),
-                                    caption: _dureeRetardLabel(
+                                    caption: rules.dureeRetardLabel(
                                         _dureeMoyenneRetardMin),
-                                    dotColor: _dureeRetardColor(
+                                    dotColor: rules.dureeRetardColor(
                                         _dureeMoyenneRetardMin),
                                   ),
                                 ),
@@ -385,9 +376,9 @@ class _DashboardBodyState extends State<DashboardBody> {
                                     label: 'DURÉE MOYENNE TRAVAIL',
                                     value: _formatMinutesToHms(
                                         _dureeMoyenneTravailH * 60),
-                                    caption: _dureeTravailLabel(
+                                    caption: rules.dureeTravailLabel(
                                         _dureeMoyenneTravailH),
-                                    dotColor: _dureeTravailColor(
+                                    dotColor: rules.dureeTravailColor(
                                         _dureeMoyenneTravailH),
                                   ),
                                 ),
@@ -454,8 +445,7 @@ class _StatCard extends StatelessWidget {
                   letterSpacing: 0.3,
                 ),
               ),
-              // La valeur occupe tout l'espace restant et est centrée dedans,
-              // peu importe si la carte a une barre de progression ou une légende
+
               Expanded(
                 child: Center(
                   child: FittedBox(
@@ -473,7 +463,7 @@ class _StatCard extends StatelessWidget {
                   ),
                 ),
               ),
-              // Barre et légende toujours en bas, sur les mêmes bases pour toutes les cartes
+
               if (showProgressBar) ...[
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),

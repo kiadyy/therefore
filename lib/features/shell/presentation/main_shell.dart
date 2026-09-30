@@ -82,7 +82,7 @@ class _TabButton extends StatelessWidget {
     return SizedBox(
       height: 52,
       child: ElevatedButton.icon(
-        // Si l'onglet est déjà actif, on ne fait rien (reste sur la page)
+        
         onPressed: isActive ? null : onTap,
         icon: Icon(icon, size: 18),
         label: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),

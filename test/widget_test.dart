@@ -1,30 +1,29 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:therefore_pointage/main.dart';
+import 'package:therefore_pointage/features/auth/presentation/login_page.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const TherefereApp());
+  testWidgets("L'écran de connexion affiche le titre et le bouton",
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MaterialApp(home: LoginPage()));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Authentification'), findsOneWidget);
+    expect(find.text('Se connecter'), findsOneWidget);
+    expect(find.byType(TextFormField),
+        findsNWidgets(2)); // identifiant + mot de passe
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets(
+      "Le bouton de connexion est bloqué tant que les champs sont vides",
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MaterialApp(home: LoginPage()));
+    await tester.pumpAndSettle();
+
+    // On tape le bouton sans rien saisir : la validation doit refuser
+    await tester.tap(find.text('Se connecter'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Champ requis'), findsWidgets);
   });
 }

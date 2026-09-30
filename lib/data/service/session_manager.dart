@@ -1,4 +1,3 @@
-// lib/services/session_manager.dart
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SessionManager {
@@ -15,6 +14,10 @@ class SessionManager {
 
   static Future<String?> getToken() async {
     return _storage.read(key: _tokenKey);
+  }
+
+  static Future<String?> getUsername() async {
+    return _storage.read(key: _usernameKey);
   }
 
   static Future<bool> isLoggedIn() async {

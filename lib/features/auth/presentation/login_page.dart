@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/app_colors.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../main.dart';
 import '../../../data/service/session_manager.dart';
 
 class LoginPage extends StatefulWidget {
@@ -42,21 +41,6 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // ⚠️ Pour l'instant, Supabase Auth attend un email.
-      // Étape suivante possible : convertir l'identifiant ID en email en interne,
-      // ou passer par une table de correspondance. Pour tester, utilise
-      // directement un email dans le champ "Identifiant ID" (ex: test@therefore.com).
-      // final response = await supabase.auth.signInWithPassword(
-      //   email: _idController.text.trim(),
-      //   password: _passwordController.text,
-      // );
-      // if (response.user == null) {
-      //   throw Exception('Échec de connexion');
-      // }
-
-      // if (!mounted) return;
-      // Navigator.of(context).pushReplacementNamed('/dashboard');
-
       final url = Uri.parse(
           'https://therefore.inviso-group.mg/theservice/v0001/restun/GetJWTToken');
       final username = _idController.text.trim();
@@ -82,8 +66,6 @@ class _LoginPageState extends State<LoginPage> {
         if (token != null) {
           await SessionManager.saveSession(token, username: username);
         }
-        // Le token se trouve probablement dans 'data' (ex: data['Token_JWT'])
-        // Tu peux le stocker ici pour tes futures requêtes.
 
         if (!mounted) return;
         Navigator.of(context).pushReplacementNamed('/dashboard');
@@ -97,10 +79,8 @@ class _LoginPageState extends State<LoginPage> {
         _errorMessage = "Identifiant ou mot de passe incorrect.";
       });
     } catch (e) {
-      print("tonga ");
-      print(e);
       setState(() {
-        _errorMessage = "Une erreur est survenue. Réessaie....";
+        _errorMessage = "Une erreur est survenue,réessaie";
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -278,7 +258,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               )
             : const Text(
-                'se connecter',
+                'Se connecter',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
       ),

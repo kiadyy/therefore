@@ -1,4 +1,3 @@
-/// Pointage du jour : {entree: "08:10:14", sortie: "17:32:27", annee: 2026, mois: 8}
 class PointageJour {
   final String? entree;
   final String? sortie;
@@ -15,7 +14,6 @@ class PointageJour {
       );
 }
 
-/// Total d'heures réalisées : {total_heures: 150.66, annee: 2026}
 class TotalHeures {
   final double totalHeures;
   final int annee;
@@ -28,16 +26,13 @@ class TotalHeures {
       );
 }
 
-/// Infos employé + stats : {MATRICULE, NOM, SOCIETE, PRENOM, duree_moyenne_retard,
-/// duree_moyenne_travail, nb_retards} + classement fourni séparément (index/length)
-
 class EmployeStats {
   final String matricule;
   final String nom;
   final String prenom;
   final String societe;
-  final String dureeMoyenneRetard; // format "HH:mm:ss"
-  final String dureeMoyenneTravail; // format "HH:mm:ss"
+  final String dureeMoyenneRetard;
+  final String dureeMoyenneTravail;
   final int nbRetards;
   final int classementIndex;
   final int classementTotal;
@@ -72,7 +67,6 @@ class EmployeStats {
       );
 }
 
-/// Un événement de pointage brut : [{date_pointage: "2026-07-30 17:18:00", ref_demande: null}]
 class PointageEvent {
   final DateTime datePointage;
   final String? refDemande;
@@ -85,15 +79,9 @@ class PointageEvent {
       );
 }
 
-/// Regroupement des événements par jour. Peut contenir de 0 à 4 pointages
-/// (matin, avant-repas, après-repas, soir), selon ce que l'employé a réellement
-/// pointé ce jour-là.
-/// Regroupement des événements par jour. Peut contenir de 0 à 4 pointages
-/// (matin, avant-repas, après-repas, soir), selon ce que l'employé a réellement
-/// pointé ce jour-là.
 class JourPointage {
   final DateTime date;
-  final List<DateTime> pointages; // triés du plus tôt au plus tard
+  final List<DateTime> pointages;
   final bool estWeekend;
 
   JourPointage({
@@ -102,10 +90,6 @@ class JourPointage {
     required this.estWeekend,
   });
 
-  /// - weekend : jour non ouvré, peu importe les pointages
-  /// - absent : aucun pointage ce jour (et pas un weekend)
-  /// - incomplet : nombre de pointages impair (1 ou 3) → une session non terminée
-  /// - complet : nombre de pointages pair (2 ou 4) → toutes les sessions closes
   String get statut {
     if (estWeekend) return 'weekend';
     if (pointages.isEmpty) return 'absent';
