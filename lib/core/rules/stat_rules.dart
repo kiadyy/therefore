@@ -55,3 +55,34 @@ String formatDureeTravail(Duration duree) {
   final minutes = duree.inMinutes.remainder(60);
   return '$heures h ${minutes.toString().padLeft(2, '0')}';
 }
+
+/// Premier prénom, avec une majuscule à chaque partie :
+/// « JEAN-MARC PAUL » -> « Jean-Marc ».
+String prenomUsuel(String prenom) {
+  final premier = prenom.trim().split(RegExp(r'\s+')).first;
+  if (premier.isEmpty) return '';
+  return premier
+      .split('-')
+      .map((p) =>
+          p.isEmpty ? p : p[0].toUpperCase() + p.substring(1).toLowerCase())
+      .join('-');
+}
+
+/// Initiales pour l'avatar : première lettre du prénom et du nom.
+String initiales(String prenom, String nom) {
+  final p = prenom.trim();
+  final n = nom.trim();
+  return ((p.isNotEmpty ? p[0] : '') + (n.isNotEmpty ? n[0] : ''))
+      .toUpperCase();
+}
+
+/// Heures avec 2 décimales et virgule française : « 150,66 h ».
+String formatHeures(double heures) =>
+    '${heures.toStringAsFixed(2).replaceAll('.', ',')} h';
+
+/// Accord du mot « retard » : « 0 retard », « 1 retard », « 2 retards ».
+String libelleRetards(int nombre) =>
+    nombre <= 1 ? '$nombre retard' : '$nombre retards';
+
+/// Rang en français : « 1er », « 2e », « 7e ».
+String libelleRang(int rang) => rang == 1 ? '1er' : '${rang}e';

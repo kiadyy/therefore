@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:therefore_pointage/data/network/network_exceptions.dart';
 import 'package:therefore_pointage/data/repositories/pointage_repository_provider.dart';
 import 'package:therefore_pointage/data/service/session_manager.dart';
+import 'package:therefore_pointage/data/session/identite_courante.dart';
 import 'package:therefore_pointage/data/session/session_expired_exception.dart';
 import 'package:therefore_pointage/features/dashboard/presentation/dashboard_body.dart';
 import 'package:therefore_pointage/features/shared/skeleton.dart';
@@ -15,24 +16,37 @@ Widget _ecran() => const MaterialApp(home: Scaffold(body: DashboardBody()));
 void main() {
   setUp(() {
     // Stockage sécurisé simulé : un jeton est présent, comme après une connexion
-    FlutterSecureStorage.setMockInitialValues({'auth_token': 'jeton-de-test'});
+    FlutterSecureStorage.setMockInitialValues({
+      'auth_token': 'jeton-de-test',
+      'username': 'identifiant.test',
+    });
+    // L'identité en mémoire ne doit pas passer d'un test à l'autre
+    IdentiteCourante.effacer();
   });
 
-  testWidgets('affiche les 6 indicateurs avec les données reçues',
+  testWidgets('affiche les indicateurs du mois avec les données reçues',
       (tester) async {
     pointageRepository = FakePointageRepository();
 
     await tester.pumpWidget(_ecran());
     await tester.pumpAndSettle();
 
-    expect(find.text('08:10:14'), findsOneWidget); // heure d'arrivée
-    expect(find.text('17:32:27'), findsOneWidget); // heure de départ
-    expect(find.text('150.66h'), findsOneWidget); // heures réalisées
-    expect(find.text('2 retard(s)'), findsOneWidget);
-    expect(find.text('7e sur 10 (Département)'), findsOneWidget);
-    expect(find.text('01:42:14'), findsOneWidget); // durée moyenne de retard
-    expect(find.text('08:04:11'), findsOneWidget); // durée moyenne de travail
-    expect(find.text('Élevé'), findsOneWidget); // plus de 7 h de travail
+    // En-tête personnalisé
+    expect(find.text('Bonjour, Employe'), findsOneWidget);
+    expect(find.text('SOCIETE TEST'), findsOneWidget);
+    expect(find.text('ET'), findsOneWidget); // initiales de l'avatar
+
+    // Indicateurs
+    expect(find.text('150,66 h'), findsOneWidget); // heures réalisées
+    expect(find.text('82 %'), findsOneWidget); // 150,66 / 184
+    expect(find.text('08:10:14'), findsOneWidget); // arrivée
+    expect(find.text('17:32:27'), findsOneWidget); // départ
+    expect(find.text('2 retards'), findsOneWidget);
+    expect(find.text('7e sur 10'), findsOneWidget);
+    expect(find.text('01:42:14'), findsOneWidget); // retard moyen
+    expect(find.text('Moyenne'), findsOneWidget); // entre 30 min et 2 h
+    expect(find.text('08:04:11'), findsOneWidget); // travail moyen
+    expect(find.text('Élevé'), findsOneWidget); // plus de 7 h
   });
 
   testWidgets(
@@ -67,42 +81,36 @@ void main() {
     expect(await SessionManager.getToken(), isNull);
   });
 
-  testWidgets('menu profil : prénom, nom, société et identifiant AD',
+  testWidgets('menu profil : identité, matricule et identifiant AD',
       (tester) async {
-    FlutterSecureStorage.setMockInitialValues({
-      'auth_token': 'jeton-de-test',
-      'username': 'identifiant.test',
-    });
     pointageRepository = FakePointageRepository();
 
     await tester.pumpWidget(_ecran());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.person));
+    await tester.tap(find.byTooltip('Menu profil'));
     await tester.pumpAndSettle();
 
     expect(find.text('Employe TEST'), findsOneWidget);
-    expect(find.text('SOCIETE TEST'), findsOneWidget);
+    expect(find.text('SOCIETE TEST'), findsWidgets); // en-tête + panneau
+    expect(find.text('0000'), findsOneWidget); // matricule
     expect(find.text('identifiant.test'), findsOneWidget);
     expect(find.text('Se déconnecter'), findsOneWidget);
   });
 
   testWidgets('menu profil sans réseau : seul l\'identifiant AD est affiché',
       (tester) async {
-    FlutterSecureStorage.setMockInitialValues({
-      'auth_token': 'jeton-de-test',
-      'username': 'identifiant.test',
-    });
     pointageRepository =
         FakePointageRepository(erreur: const NoConnectionException());
 
     await tester.pumpWidget(_ecran());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.person));
+    await tester.tap(find.byTooltip('Menu profil'));
     await tester.pumpAndSettle();
 
     expect(find.text('SOCIETE TEST'), findsNothing);
+    expect(find.text('Matricule'), findsNothing);
     expect(find.text('identifiant.test'), findsOneWidget);
     expect(find.text('Se déconnecter'), findsOneWidget);
   });

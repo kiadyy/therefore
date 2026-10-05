@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-
-import 'core/constants/app_colors.dart';
 import 'data/service/session_manager.dart';
 import 'data/service/biometric_service.dart';
 import 'features/auth/presentation/login_page.dart';
 import 'features/auth/presentation/biometric_lock_screen.dart';
 import 'features/shell/presentation/main_shell.dart';
+import 'core/theme/app_theme.dart';
 
 void main() {
   runApp(const TherefereApp());
@@ -22,15 +21,7 @@ class TherefereApp extends StatelessWidget {
       routes: {
         '/dashboard': (context) => MainShell(),
       },
-      theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: AppColors.backgroundLight,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primaryGreen,
-          primary: AppColors.primaryGreen,
-        ),
-        fontFamily: 'Jost',
-      ),
+      theme: AppTheme.light,
       home: FutureBuilder<_StartupState>(
         future: _resolveStartupState(),
         builder: (context, snapshot) {

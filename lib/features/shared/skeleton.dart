@@ -55,57 +55,112 @@ class SkeletonBlock extends StatelessWidget {
   }
 }
 
-/// Squelette du tableau de bord : 3 rangées de 2 cartes, avec la même
-/// disposition, les mêmes marges et le même rayon que les vraies cartes.
+/// Squelette de l'écran Statistique : mêmes cartes, mêmes hauteurs et
+/// même rayon que le contenu réel (carte principale, horaires, retards,
+/// deux tuiles de durées moyennes).
 class DashboardSkeleton extends StatelessWidget {
   const DashboardSkeleton({super.key});
 
+  Widget _carte({required double hauteur, required Widget child}) {
+    return Container(
+      height: hauteur,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    Widget carte() {
-      return Expanded(
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: AppColors.cardBorder, width: 1.4),
+    return SkeletonPulse(
+      child: Column(
+        children: [
+          // Carte principale : anneau + textes
+          _carte(
+            hauteur: 152,
+            child: const Row(
+              children: [
+                SkeletonBlock(width: 112, height: 112),
+                SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SkeletonBlock(width: 110, height: 12),
+                      SizedBox(height: 10),
+                      SkeletonBlock(width: 140, height: 28),
+                      SizedBox(height: 10),
+                      SkeletonBlock(width: 120, height: 12),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: const Column(
+          const SizedBox(height: 12),
+          // Horaires
+          _carte(
+            hauteur: 76,
+            child: const Row(
+              children: [
+                Expanded(child: SkeletonBlock(height: 38)),
+                SizedBox(width: 16),
+                Expanded(child: SkeletonBlock(height: 38)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Retards
+          _carte(
+            hauteur: 124,
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBlock(width: 160, height: 40),
+                Spacer(),
+                SkeletonBlock(height: 8),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Durées moyennes
+          Row(
             children: [
-              SkeletonBlock(width: 90, height: 10), // libellé
               Expanded(
-                child: Center(
-                  child: SkeletonBlock(width: 110, height: 24), // valeur
+                child: _carte(
+                  hauteur: 150,
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SkeletonBlock(width: 40, height: 40),
+                      Spacer(),
+                      SkeletonBlock(width: 100, height: 22),
+                    ],
+                  ),
                 ),
               ),
-              SkeletonBlock(width: 70, height: 8), // légende
+              const SizedBox(width: 12),
+              Expanded(
+                child: _carte(
+                  hauteur: 150,
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SkeletonBlock(width: 40, height: 40),
+                      Spacer(),
+                      SkeletonBlock(width: 100, height: 22),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
-        ),
-      );
-    }
-
-    Widget rangee() {
-      return Expanded(
-        child: Row(
-          children: [carte(), const SizedBox(width: 16), carte()],
-        ),
-      );
-    }
-
-    return SkeletonPulse(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            rangee(),
-            const SizedBox(height: 16),
-            rangee(),
-            const SizedBox(height: 16),
-            rangee(),
-          ],
-        ),
+        ],
       ),
     );
   }

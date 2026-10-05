@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../dashboard/presentation/dashboard_body.dart';
 import '../../history/presentation/history_body.dart';
 
@@ -21,78 +22,129 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: IndexedStack(
-                index: _selectedTab,
-                children: [
-                  DashboardBody(matricule: widget.matricule),
-                  HistoryBody(matricule: widget.matricule),
-                ],
+      body: Column(
+        children: [
+          Expanded(
+            // La zone de la barre d'état du téléphone est peinte en vert,
+            // pour prolonger l'en-tête jusqu'en haut de l'écran ; le contenu
+            // commence en dessous. Le bas est géré par la barre de navigation.
+            child: ColoredBox(
+              color: AppColors.primaryGreen,
+              child: SafeArea(
+                bottom: false,
+                child: ColoredBox(
+                  color: AppColors.backgroundLight,
+                  child: IndexedStack(
+                    index: _selectedTab,
+                    children: [
+                      DashboardBody(matricule: widget.matricule),
+                      HistoryBody(matricule: widget.matricule),
+                    ],
+                  ),
+                ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _TabButton(
-                      icon: Icons.bar_chart,
-                      label: 'Statistique',
-                      isActive: _selectedTab == 0,
-                      onTap: () => setState(() => _selectedTab = 0),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _TabButton(
-                      icon: Icons.calendar_today,
-                      label: 'pointage',
-                      isActive: _selectedTab == 1,
-                      onTap: () => setState(() => _selectedTab = 1),
-                    ),
-                  ),
-                ],
+          ),
+          _BarreNavigation(
+            ongletActif: _selectedTab,
+            onChanger: (index) => setState(() => _selectedTab = index),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Barre de navigation du bas : deux onglets, l'actif en vert citron.
+/// Toucher l'onglet déjà actif ne fait rien (on reste sur la page).
+class _BarreNavigation extends StatelessWidget {
+  final int ongletActif;
+  final ValueChanged<int> onChanger;
+
+  const _BarreNavigation({required this.ongletActif, required this.onChanger});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        border: Border(top: BorderSide(color: AppColors.cardBorder)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: _OngletBouton(
+                  icone: Icons.bar_chart_rounded,
+                  libelle: 'Statistique',
+                  actif: ongletActif == 0,
+                  onTap: () => onChanger(0),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: AppDimens.gap),
+              Expanded(
+                child: _OngletBouton(
+                  icone: Icons.event_available_rounded,
+                  libelle: 'Pointage',
+                  actif: ongletActif == 1,
+                  onTap: () => onChanger(1),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _TabButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
+class _OngletBouton extends StatelessWidget {
+  final IconData icone;
+  final String libelle;
+  final bool actif;
   final VoidCallback onTap;
 
-  const _TabButton({
-    required this.icon,
-    required this.label,
-    required this.isActive,
+  const _OngletBouton({
+    required this.icone,
+    required this.libelle,
+    required this.actif,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 52,
-      child: ElevatedButton.icon(
-        onPressed: isActive ? null : onTap,
-        icon: Icon(icon, size: 18),
-        label: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor:
-              isActive ? AppColors.accentLime : AppColors.primaryGreen,
-          disabledBackgroundColor: AppColors.accentLime,
-          foregroundColor: Colors.white,
-          disabledForegroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+    final couleur = actif ? AppColors.textDark : AppColors.textGrey;
+
+    return Semantics(
+      selected: actif,
+      button: true,
+      child: Material(
+        color: actif ? AppColors.accentLime : Colors.transparent,
+        borderRadius: BorderRadius.circular(AppDimens.radiusButton),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppDimens.radiusButton),
+          onTap: actif ? null : onTap,
+          child: SizedBox(
+            height: 52,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icone, size: 22, color: couleur),
+                const SizedBox(width: 8),
+                Text(
+                  libelle,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: actif ? FontWeight.w600 : FontWeight.w500,
+                    color: couleur,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/rules/stat_rules.dart' as rules;
+import '../../../core/theme/app_theme.dart';
 import '../../../data/repositories/pointage_repository_provider.dart';
+import '../../../data/session/identite_courante.dart';
 import '../../../data/session/session_expired_exception.dart';
 import '../../shared/error_state_view.dart';
 import '../../shared/logout_action.dart';
@@ -22,6 +24,9 @@ const List<String> _moisNoms = [
   'Novembre',
   'Décembre',
 ];
+
+/// Base mensuelle d'heures ouvrables (valeur de la maquette d'origine).
+const double _heuresOuvrables = 184;
 
 class DashboardBody extends StatefulWidget {
   final String matricule;
@@ -47,6 +52,8 @@ class _DashboardBodyState extends State<DashboardBody> {
   int _classementTotal = 0;
   double _dureeMoyenneRetardMin = 0;
   double _dureeMoyenneTravailH = 0;
+  String _prenom = '';
+  String _societe = '';
 
   @override
   void initState() {
@@ -59,8 +66,8 @@ class _DashboardBodyState extends State<DashboardBody> {
 
   /// Charge les données du mois sélectionné.
   /// [silencieux] : utilisé par « tirer pour actualiser ». Les cartes restent
-  /// affichées pendant le rechargement (l'indicateur de RefreshIndicator suffit),
-  /// au lieu d'être remplacées par le squelette.
+  /// affichées pendant le rechargement, au lieu d'être remplacées par le
+  /// squelette.
   Future<void> _loadDashboardData({bool silencieux = false}) async {
     if (!silencieux) {
       setState(() {
@@ -86,6 +93,10 @@ class _DashboardBodyState extends State<DashboardBody> {
         mois: _selectedMonth,
       );
 
+      // Partage l'identité avec l'avatar et le menu profil (mémoire vive
+      // uniquement, rien n'est stocké sur le téléphone)
+      IdentiteCourante.employe.value = stats;
+
       if (!mounted) return;
       setState(() {
         _heureArrivee = pointageJour.entree ?? '--:--:--';
@@ -95,9 +106,10 @@ class _DashboardBodyState extends State<DashboardBody> {
         _classementIndex = stats.classementIndex;
         _classementTotal = stats.classementTotal;
         _dureeMoyenneRetardMin = rules.hmsToMinutes(stats.dureeMoyenneRetard);
-
         _dureeMoyenneTravailH =
             rules.hmsToMinutes(stats.dureeMoyenneTravail) / 60;
+        _prenom = rules.prenomUsuel(stats.prenom);
+        _societe = stats.societe;
         _lastError = null;
         _isLoading = false;
       });
@@ -131,7 +143,7 @@ class _DashboardBodyState extends State<DashboardBody> {
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (context) {
         return StatefulBuilder(
@@ -145,14 +157,15 @@ class _DashboardBodyState extends State<DashboardBody> {
                 children: [
                   const Text(
                     'Choisir le mois',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.chevron_left),
+                        tooltip: 'Année précédente',
+                        icon: const Icon(Icons.chevron_left_rounded),
                         onPressed: () => setModalState(() {
                           tempYear--;
                           if (tempYear == now.year && tempMonth > now.month) {
@@ -168,13 +181,11 @@ class _DashboardBodyState extends State<DashboardBody> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.chevron_right),
+                        tooltip: 'Année suivante',
+                        icon: const Icon(Icons.chevron_right_rounded),
                         onPressed: canGoNextYear
                             ? () => setModalState(() => tempYear++)
                             : null,
-                        color: canGoNextYear
-                            ? null
-                            : AppColors.textGrey.withOpacity(0.4),
                       ),
                     ],
                   ),
@@ -190,14 +201,10 @@ class _DashboardBodyState extends State<DashboardBody> {
                       return ChoiceChip(
                         label: Text(_moisNoms[i]),
                         selected: selected,
+                        showCheckmark: false,
                         selectedColor: AppColors.primaryGreen,
-                        backgroundColor: isFuture
-                            ? AppColors.fieldGrey.withOpacity(0.5)
-                            : null,
                         labelStyle: TextStyle(
-                          color: isFuture
-                              ? AppColors.textGrey.withOpacity(0.5)
-                              : (selected ? Colors.white : AppColors.textDark),
+                          color: selected ? Colors.white : AppColors.textDark,
                         ),
                         onSelected: isFuture
                             ? null
@@ -205,13 +212,18 @@ class _DashboardBodyState extends State<DashboardBody> {
                       );
                     }),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
+                    height: 52,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accentLime,
+                        backgroundColor: AppColors.primaryGreen,
                         foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppDimens.radiusButton),
+                        ),
                       ),
                       onPressed: () {
                         setState(() {
@@ -221,7 +233,13 @@ class _DashboardBodyState extends State<DashboardBody> {
                         Navigator.pop(context);
                         _loadDashboardData();
                       },
-                      child: const Text('Valider'),
+                      child: const Text(
+                        'Valider',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -235,161 +253,374 @@ class _DashboardBodyState extends State<DashboardBody> {
 
   @override
   Widget build(BuildContext context) {
+    final Widget contenu;
+    if (_isLoading) {
+      contenu = const DashboardSkeleton();
+    } else if (_lastError != null) {
+      contenu = _Carte(
+        child: ErrorStateView(error: _lastError!, onRetry: _loadDashboardData),
+      );
+    } else {
+      contenu = _buildCartes();
+    }
+
+    return RefreshIndicator(
+      color: AppColors.primaryGreen,
+      onRefresh: () => _loadDashboardData(silencieux: true),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
+        children: [
+          _EnTete(
+            prenom: _prenom,
+            societe: _societe,
+            periode: '${_moisNoms[_selectedMonth - 1]} $_selectedYear',
+            onChoisirPeriode: _openMonthPicker,
+          ),
+          // Les cartes remontent sur l'en-tête vert (effet de superposition)
+          Transform.translate(
+            offset: const Offset(0, -56),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.paddingScreen,
+              ),
+              child: contenu,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCartes() {
+    final progression = (_heureRealisee / _heuresOuvrables).clamp(0.0, 1.0);
+
     return Column(
       children: [
-        Container(
-          height: 70,
-          color: AppColors.primaryGreen,
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+        // Carte principale : heures réalisées
+        _Carte(
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              InkWell(
-                onTap: _openMonthPicker,
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.calendar_month,
-                        color: Colors.white,
-                        size: 18,
+              _AnneauProgression(valeur: progression),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Heures réalisées', style: AppText.secondaire),
+                    const SizedBox(height: 4),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        rules.formatHeures(_heureRealisee),
+                        style: AppText.chiffreFort,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${_moisNoms[_selectedMonth - 1]} $_selectedYear',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const Icon(Icons.arrow_drop_down, color: Colors.white),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'sur ${_heuresOuvrables.toInt()} h ouvrables',
+                      style: AppText.secondaire,
+                    ),
+                  ],
                 ),
               ),
-              const ProfileIconButton(),
             ],
           ),
         ),
-        Expanded(
-          child: _isLoading
-              ? const DashboardSkeleton()
-              : _lastError != null
-                  ? ErrorStateView(
-                      error: _lastError!,
-                      onRetry: _loadDashboardData,
-                    )
-                  : RefreshIndicator(
-                      color: AppColors.primaryGreen,
-                      onRefresh: () => _loadDashboardData(silencieux: true),
-                      // Le contenu garde exactement sa taille (les 3 rangées se
-                      // partagent la hauteur), tout en pouvant être « tiré »
-                      // vers le bas pour déclencher l'actualisation.
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          return SingleChildScrollView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            child: SizedBox(
-                              height: constraints.maxHeight,
-                              child: _buildCartes(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+        const SizedBox(height: AppDimens.gap),
+
+        // Horaires d'arrivée et de départ
+        _Carte(
+          child: Row(
+            children: [
+              Expanded(
+                child: _ValeurAvecIcone(
+                  icone: Icons.login_rounded,
+                  libelle: 'Arrivée',
+                  valeur: _heureArrivee,
+                ),
+              ),
+              const SizedBox(width: AppDimens.gap),
+              Expanded(
+                child: _ValeurAvecIcone(
+                  icone: Icons.logout_rounded,
+                  libelle: 'Départ',
+                  valeur: _heureDepart,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppDimens.gap),
+
+        // Retards et classement
+        _CarteRetards(
+          nbRetards: _nbRetards,
+          rang: _classementIndex,
+          total: _classementTotal,
+        ),
+        const SizedBox(height: AppDimens.gap),
+
+        // Durées moyennes
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _TuileDuree(
+                  icone: Icons.timer_outlined,
+                  libelle: 'Retard moyen',
+                  valeur: _formatMinutesToHms(_dureeMoyenneRetardMin),
+                  couleur: rules.dureeRetardColor(_dureeMoyenneRetardMin),
+                  appreciation: rules.dureeRetardLabel(_dureeMoyenneRetardMin),
+                ),
+              ),
+              const SizedBox(width: AppDimens.gap),
+              Expanded(
+                child: _TuileDuree(
+                  icone: Icons.work_outline_rounded,
+                  libelle: 'Travail moyen / jour',
+                  valeur: _formatMinutesToHms(_dureeMoyenneTravailH * 60),
+                  couleur: rules.dureeTravailColor(_dureeMoyenneTravailH),
+                  appreciation: rules.dureeTravailLabel(_dureeMoyenneTravailH),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
+}
 
-  /// Les 6 cartes du tableau de bord (disposition inchangée).
-  Widget _buildCartes() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
+// ---------------------------------------------------------------------------
+// Composants de l'écran
+// ---------------------------------------------------------------------------
+
+/// Fond clair et couleur d'encre associés à une couleur de règle
+/// (vert, orange ou rouge), pour les icônes et les pastilles.
+({Color fond, Color encre}) _teintePour(Color couleurRegle) {
+  if (couleurRegle == Colors.red) {
+    return (fond: AppColors.absentTint, encre: AppColors.absentText);
+  }
+  if (couleurRegle == AppColors.incompletBorder) {
+    return (fond: AppColors.incompletBg, encre: AppColors.incompletText);
+  }
+  return (fond: AppColors.primaryTint, encre: AppColors.primaryGreen);
+}
+
+class _EnTete extends StatelessWidget {
+  final String prenom;
+  final String societe;
+  final String periode;
+  final VoidCallback onChoisirPeriode;
+
+  const _EnTete({
+    required this.prenom,
+    required this.societe,
+    required this.periode,
+    required this.onChoisirPeriode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 76),
+      decoration: const BoxDecoration(
+        color: AppColors.primaryGreen,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    label: 'HEURE D\'ARRIVÉE',
-                    value: _heureArrivee,
-                  ),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      prenom.isEmpty ? 'Bonjour' : 'Bonjour, $prenom',
+                      style: AppText.titre.copyWith(color: Colors.white),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (societe.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        societe,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xE0FFFFFF),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _StatCard(
-                    label: 'HEURE DE DÉPART',
-                    value: _heureDepart,
-                  ),
+              ),
+              const SizedBox(width: 12),
+              const ProfileIconButton(),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _PastillePeriode(libelle: periode, onTap: onChoisirPeriode),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bouton-pastille du filtre de période, dans l'en-tête vert.
+class _PastillePeriode extends StatelessWidget {
+  final String libelle;
+  final VoidCallback onTap;
+
+  const _PastillePeriode({required this.libelle, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0x29FFFFFF),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.only(left: 12, right: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.calendar_month_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                libelle,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Carte blanche aux coins arrondis, base de tous les blocs de l'écran.
+class _Carte extends StatelessWidget {
+  final Widget child;
+
+  const _Carte({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: child,
+    );
+  }
+}
+
+/// Icône dans un carré aux coins arrondis, sur fond teinté.
+class _IconeTuile extends StatelessWidget {
+  final IconData icone;
+  final Color fond;
+  final Color encre;
+
+  const _IconeTuile({
+    required this.icone,
+    this.fond = AppColors.primaryTint,
+    this.encre = AppColors.primaryGreen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: fond,
+        borderRadius: BorderRadius.circular(AppDimens.radiusIcon),
+      ),
+      child: Icon(icone, size: 21, color: encre),
+    );
+  }
+}
+
+/// Anneau de progression des heures réalisées, animé une seule fois à
+/// l'arrivée des données (animation désactivée si le téléphone le demande).
+class _AnneauProgression extends StatelessWidget {
+  final double valeur; // entre 0 et 1
+
+  const _AnneauProgression({required this.valeur});
+
+  @override
+  Widget build(BuildContext context) {
+    final sansAnimation = MediaQuery.of(context).disableAnimations;
+    final couleur = AppColors.progressColorFor(valeur);
+
+    return SizedBox(
+      width: 112,
+      height: 112,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: valeur),
+            duration: sansAnimation
+                ? Duration.zero
+                : const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+            builder: (context, v, _) => SizedBox(
+              width: 112,
+              height: 112,
+              child: CircularProgressIndicator(
+                value: v,
+                strokeWidth: 11,
+                strokeCap: StrokeCap.round,
+                backgroundColor: AppColors.fieldGrey,
+                color: couleur,
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    label: 'HEURE RÉALISÉE',
-                    value: '${_heureRealisee.toStringAsFixed(2)}h',
-                    caption: 'Sur 184h (Jours ouvrables)',
-                    showDot: false,
-                    showProgressBar: true,
-                    progressValue: (_heureRealisee / 184).clamp(0, 1),
-                  ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${(valeur * 100).round()} %',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _StatCard(
-                    label: 'CLASSEMENT RETARDS',
-                    value: '$_nbRetards retard(s)',
-                    caption: _classementTotal > 0
-                        ? '${_classementIndex}e sur $_classementTotal (Département)'
-                        : 'Pas de données',
-                    dotColor: rules.classementColor(_nbRetards),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    label: 'DURÉE MOYENNE RETARD',
-                    value: _formatMinutesToHms(_dureeMoyenneRetardMin),
-                    caption: rules.dureeRetardLabel(_dureeMoyenneRetardMin),
-                    dotColor: rules.dureeRetardColor(_dureeMoyenneRetardMin),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _StatCard(
-                    label: 'DURÉE MOYENNE TRAVAIL',
-                    value: _formatMinutesToHms(_dureeMoyenneTravailH * 60),
-                    caption: rules.dureeTravailLabel(_dureeMoyenneTravailH),
-                    dotColor: rules.dureeTravailColor(_dureeMoyenneTravailH),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const Text(
+                'du mois',
+                style: TextStyle(fontSize: 11, color: AppColors.textGrey),
+              ),
+            ],
           ),
         ],
       ),
@@ -397,125 +628,215 @@ class _DashboardBodyState extends State<DashboardBody> {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final String? caption;
-  final bool showDot;
-  final Color? dotColor;
-  final bool showProgressBar;
-  final double progressValue;
+class _ValeurAvecIcone extends StatelessWidget {
+  final IconData icone;
+  final String libelle;
+  final String valeur;
 
-  const _StatCard({
-    required this.label,
-    required this.value,
-    this.caption,
-    this.showDot = true,
-    this.dotColor,
-    this.showProgressBar = false,
-    this.progressValue = 0,
+  const _ValeurAvecIcone({
+    required this.icone,
+    required this.libelle,
+    required this.valeur,
   });
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cardHeight = constraints.maxHeight;
-        final valueFontSize = (cardHeight * 0.18).clamp(20.0, 32.0);
-        final labelFontSize = (cardHeight * 0.08).clamp(10.0, 12.0);
-        final captionFontSize = (cardHeight * 0.075).clamp(9.0, 11.0);
-
-        return Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            horizontal: cardHeight * 0.06,
-            vertical: cardHeight * 0.06,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: AppColors.success, width: 1.4),
-          ),
+    return Row(
+      children: [
+        _IconeTuile(icone: icone),
+        const SizedBox(width: 12),
+        Expanded(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Label toujours en haut, centré horizontalement
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: labelFontSize,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textGrey,
-                  letterSpacing: 0.3,
-                ),
+              Text(libelle, style: AppText.libelle),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(valeur, style: AppText.valeur),
               ),
-
-              Expanded(
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      value,
-                      maxLines: 1,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: valueFontSize,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              if (showProgressBar) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progressValue,
-                    minHeight: 6,
-                    backgroundColor: AppColors.fieldGrey,
-                    valueColor: AlwaysStoppedAnimation(
-                      AppColors.progressColorFor(progressValue),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-              ],
-              if (caption != null)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (showDot) ...[
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: dotColor ?? AppColors.success,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    Flexible(
-                      child: Text(
-                        caption!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: captionFontSize,
-                          color: AppColors.textGrey,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
             ],
           ),
-        );
-      },
+        ),
+      ],
+    );
+  }
+}
+
+/// Carte des retards : nombre de retards, rang dans le département et
+/// position visuelle sur une barre (du moins au plus en retard).
+class _CarteRetards extends StatelessWidget {
+  final int nbRetards;
+  final int rang;
+  final int total;
+
+  const _CarteRetards({
+    required this.nbRetards,
+    required this.rang,
+    required this.total,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final couleur = rules.classementColor(nbRetards);
+    final teinte = _teintePour(couleur);
+    final aUnClassement = total > 0 && rang > 0;
+    // Position du marqueur entre 0 (moins de retards) et 1 (plus de retards)
+    final position =
+        total > 1 ? ((rang - 1) / (total - 1)).clamp(0.0, 1.0) : 0.0;
+
+    return _Carte(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _IconeTuile(
+                icone: Icons.leaderboard_rounded,
+                fond: teinte.fond,
+                encre: teinte.encre,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Retards du mois', style: AppText.libelle),
+                    Text(rules.libelleRetards(nbRetards),
+                        style: AppText.valeur),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    aUnClassement
+                        ? '${rules.libelleRang(rang)} sur $total'
+                        : 'Pas de données',
+                    style: AppText.valeur,
+                  ),
+                  if (aUnClassement)
+                    const Text('dans le département', style: AppText.libelle),
+                ],
+              ),
+            ],
+          ),
+          if (aUnClassement) ...[
+            const SizedBox(height: 14),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const tailleMarqueur = 16.0;
+                final x = position * (constraints.maxWidth - tailleMarqueur);
+                return SizedBox(
+                  height: tailleMarqueur,
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 4,
+                        child: Container(
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: AppColors.trackGrey,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: x,
+                        child: Container(
+                          width: tailleMarqueur,
+                          height: tailleMarqueur,
+                          decoration: BoxDecoration(
+                            color: couleur,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 3),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 6),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Moins de retards', style: AppText.libelle),
+                Text('Plus de retards', style: AppText.libelle),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Tuile d'une durée moyenne, avec sa pastille d'appréciation colorée
+/// (couleur et libellé calculés par les règles de stat_rules.dart).
+class _TuileDuree extends StatelessWidget {
+  final IconData icone;
+  final String libelle;
+  final String valeur;
+  final Color couleur;
+  final String appreciation;
+
+  const _TuileDuree({
+    required this.icone,
+    required this.libelle,
+    required this.valeur,
+    required this.couleur,
+    required this.appreciation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final teinte = _teintePour(couleur);
+
+    return _Carte(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _IconeTuile(icone: icone, fond: teinte.fond, encre: teinte.encre),
+          const SizedBox(height: 12),
+          Text(libelle, style: AppText.libelle),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              valeur,
+              style: AppText.valeur.copyWith(fontSize: 22),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: teinte.fond,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: couleur,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(appreciation, style: AppText.pastille),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
