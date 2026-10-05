@@ -48,3 +48,10 @@ double hmsToMinutes(String value) {
   final secondes = double.tryParse(parts[2]) ?? 0;
   return heures * 60 + minutes + secondes / 60;
 }
+
+/// Formate une durée de travail pour l'affichage : « 8 h 05 ».
+String formatDureeTravail(Duration duree) {
+  final heures = duree.inHours;
+  final minutes = duree.inMinutes.remainder(60);
+  return '$heures h ${minutes.toString().padLeft(2, '0')}';
+}

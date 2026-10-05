@@ -66,6 +66,8 @@ void main() {
     for (final h in ['8:00', '12:00', '13:00', '17:05', '8:30']) {
       expect(find.text(h), findsOneWidget);
     }
+    expect(find.text('8 h 05'), findsOneWidget); // 4 h 00 + 4 h 05
+    expect(find.text('—'), findsOneWidget); // journée incomplète
   });
 
   testWidgets(

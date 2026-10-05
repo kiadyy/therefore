@@ -97,4 +97,19 @@ class JourPointage {
     if (pointages.length.isOdd) return 'incomplet';
     return 'complet';
   }
+
+  /// Temps travaillé dans la journée : somme des intervalles entre les
+  /// pointages pris deux à deux (arrivée -> départ, ou arrivée -> pause
+  /// puis retour -> départ). La pause déjeuner n'est donc pas comptée.
+  /// Renvoie null si le nombre de pointages est nul ou impair : la durée
+  /// ne peut alors pas être calculée de façon fiable.
+  Duration? get dureeTravaillee {
+    if (pointages.isEmpty || pointages.length.isOdd) return null;
+    final tries = [...pointages]..sort();
+    var total = Duration.zero;
+    for (var i = 0; i < tries.length; i += 2) {
+      total += tries[i + 1].difference(tries[i]);
+    }
+    return total;
+  }
 }

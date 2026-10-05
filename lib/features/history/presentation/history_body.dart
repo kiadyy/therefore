@@ -7,6 +7,7 @@ import '../../../data/repositories/pointage_repository_provider.dart';
 import '../../../data/session/session_expired_exception.dart';
 import '../../shared/logout_action.dart';
 import '../../shared/error_state_view.dart';
+import '../../../core/rules/stat_rules.dart' as rules;
 
 class HistoryBody extends StatefulWidget {
   final String matricule;
@@ -269,6 +270,11 @@ class _JourCard extends StatelessWidget {
         cardBorder = Colors.red;
         badgeLabel = 'Absent';
     }
+    // Durée travaillée : affichée si calculable, « — » si journée incomplète
+    final duree = jour.dureeTravaillee;
+    final String? dureeAffichee = duree != null
+        ? rules.formatDureeTravail(duree)
+        : (jour.statut == 'incomplet' ? '—' : null);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -309,12 +315,27 @@ class _JourCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            dateStr,
-            style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                dateStr,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              if (dureeAffichee != null)
+                Text(
+                  dureeAffichee,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: badgeColor,
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 10),
           if (jour.pointages.isNotEmpty)

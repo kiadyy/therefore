@@ -37,8 +37,7 @@ void main() {
   testWidgets(
       'sans connexion : message clair, puis « Réessayer » recharge les données',
       (tester) async {
-    final fake =
-        FakePointageRepository(erreur: const NoConnectionException());
+    final fake = FakePointageRepository(erreur: const NoConnectionException());
     pointageRepository = fake;
 
     await tester.pumpWidget(_ecran());

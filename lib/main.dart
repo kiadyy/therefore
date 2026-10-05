@@ -58,7 +58,7 @@ class _StartupState {
 
 Future<_StartupState> _resolveStartupState() async {
   final loggedIn = await SessionManager.isLoggedIn();
-    if (!loggedIn) {
+  if (!loggedIn) {
     return _StartupState(loggedIn: false, biometricRequired: false);
   }
 

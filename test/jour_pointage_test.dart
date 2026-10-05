@@ -42,12 +42,14 @@ void main() {
     });
 
     test('aucun pointage un jour ouvré : absent', () {
-      final j = JourPointage(date: DateTime(2026, 9, 1), pointages: [], estWeekend: false);
+      final j = JourPointage(
+          date: DateTime(2026, 9, 1), pointages: [], estWeekend: false);
       expect(j.statut, 'absent');
     });
 
     test('samedi ou dimanche, même sans pointage : week-end', () {
-      final j = JourPointage(date: DateTime(2026, 9, 5), pointages: [], estWeekend: true);
+      final j = JourPointage(
+          date: DateTime(2026, 9, 5), pointages: [], estWeekend: true);
       expect(j.statut, 'weekend');
     });
 
