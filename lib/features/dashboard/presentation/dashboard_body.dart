@@ -5,6 +5,7 @@ import '../../../data/repositories/pointage_repository_provider.dart';
 import '../../shared/logout_action.dart';
 import '../../../data/session/session_expired_exception.dart';
 import '../../../core/rules/stat_rules.dart' as rules;
+import '../../shared/error_state_view.dart';
 
 const List<String> _moisNoms = [
   'Janvier',
@@ -35,7 +36,7 @@ class _DashboardBodyState extends State<DashboardBody> {
   late int _selectedMonth;
 
   bool _isLoading = true;
-  String? _errorMessage;
+  Object? _lastError;
 
   String _heureArrivee = '--:--:--';
   String _heureDepart = '--:--:--';
@@ -70,7 +71,7 @@ class _DashboardBodyState extends State<DashboardBody> {
   Future<void> _loadDashboardData() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _lastError = null;
     });
 
     try {
@@ -110,7 +111,7 @@ class _DashboardBodyState extends State<DashboardBody> {
       }
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Impossible de charger les données.';
+        _lastError = e;
         _isLoading = false;
       });
     }
@@ -122,29 +123,6 @@ class _DashboardBodyState extends State<DashboardBody> {
     final m = (totalSeconds % 3600) ~/ 60;
     final s = totalSeconds % 60;
     return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-  }
-
-  Color _dureeRetardColor(double minutes) {
-    if (minutes > 120) return Colors.red;
-    if (minutes >= 30) return const Color(0xFFF09517);
-    return AppColors.success;
-  }
-
-  Color _dureeTravailColor(double heures) {
-    if (heures <= 4) return Colors.red;
-    if (heures <= 7) return const Color(0xFFF09517);
-    return AppColors.success;
-  }
-
-  String _dureeRetardLabel(double minutes) {
-    if (minutes > 120) return 'Faible';
-    return 'Moyenne';
-  }
-
-  String _dureeTravailLabel(double heures) {
-    if (heures <= 4) return 'Faible';
-    if (heures <= 7) return 'Moyenne';
-    return 'Élevé';
   }
 
   Future<void> _openMonthPicker() async {
@@ -300,8 +278,9 @@ class _DashboardBodyState extends State<DashboardBody> {
         Expanded(
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : _errorMessage != null
-                  ? Center(child: Text(_errorMessage!))
+              : _lastError != null
+                  ? ErrorStateView(
+                      error: _lastError!, onRetry: _loadDashboardData)
                   : Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(

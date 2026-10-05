@@ -4,7 +4,9 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import "../service/session_manager.dart";
 import '../session/session_expired_exception.dart';
-
+import 'dart:async';
+import 'dart:io';
+import '../network/network_exceptions.dart';
 
 abstract class PointageRepository {
   Future<PointageJour> getPointageDuJour(String matricule,
@@ -19,7 +21,37 @@ abstract class PointageRepository {
     required DateTime fin,
   });
 }
+// À ajouter en haut de pointage_repository.dart :
+// import 'dart:async';
+// import 'dart:io';
+// import '../network/network_exceptions.dart';
 
+/// Enveloppe un appel réseau : convertit les erreurs bas niveau (pas de
+/// connexion, délai dépassé, erreur serveur) en exceptions dédiées que
+/// l'interface sait afficher clairement. Utilisation :
+///
+///   final response = await networkGuard(() => http.get(url, headers: ...));
+///
+Future<http.Response> networkGuard(
+  Future<http.Response> Function() call, {
+  Duration timeout = const Duration(seconds: 12),
+}) async {
+  try {
+    final response = await call().timeout(timeout);
+    if (response.statusCode >= 500) {
+      throw ServerUnavailableException(statusCode: response.statusCode);
+    }
+    return response;
+  } on SocketException {
+    // Pas de réseau, ou serveur totalement injoignable (DNS, etc.)
+    throw const NoConnectionException();
+  } on TimeoutException {
+    // Le serveur met trop de temps à répondre
+    throw const ServerUnavailableException();
+  }
+  // Les autres erreurs (401, 404, erreurs de format JSON...) remontent
+  // telles quelles, elles sont déjà gérées ailleurs (ex: SessionExpiredException).
+}
 
 class MockPointageRepository implements PointageRepository {
   @override
@@ -34,13 +66,14 @@ class MockPointageRepository implements PointageRepository {
       'https://pointeuse-backend.inviso-group.mg/user/heure-arrivee'
       '?mois=$mois&annee=$annee',
     );
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-      },
-    );
+    final response = await networkGuard(() => http.get(
+          url,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ));
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
 
@@ -58,7 +91,6 @@ class MockPointageRepository implements PointageRepository {
         'Erreur lors de la récupération du pointage (${response.statusCode})',
       );
     }
-    
   }
 
   @override
@@ -73,13 +105,13 @@ class MockPointageRepository implements PointageRepository {
       'https://pointeuse-backend.inviso-group.mg/user/heure-realise'
       '?mois=$mois&annee=$annee',
     );
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-      },
-    );
+    final response = await networkGuard(() => http.get(
+          url,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ));
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
 
@@ -93,7 +125,6 @@ class MockPointageRepository implements PointageRepository {
         'Erreur lors de la récupération du pointage (${response.statusCode})',
       );
     }
-    
   }
 
   @override
@@ -108,13 +139,13 @@ class MockPointageRepository implements PointageRepository {
       'https://pointeuse-backend.inviso-group.mg/user/my-retards'
       '?mois=$mois&annee=$annee&order=asc',
     );
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-      },
-    );
+    final response = await networkGuard(() => http.get(
+          url,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ));
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return EmployeStats.fromJson(
@@ -138,7 +169,6 @@ class MockPointageRepository implements PointageRepository {
         'Erreur lors de la récupération du pointage (${response.statusCode})',
       );
     }
-    
   }
 
   @override
@@ -155,13 +185,13 @@ class MockPointageRepository implements PointageRepository {
       'https://pointeuse-backend.inviso-group.mg/presence/historique'
       '?date_debut=$date_debut&date_fin=$date_fin',
     );
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-      },
-    );
+    final response = await networkGuard(() => http.get(
+          url,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ));
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       for (var pointage in data) {
@@ -169,7 +199,6 @@ class MockPointageRepository implements PointageRepository {
             DateFormat('yyyy-MM-dd HH:mm:ss').parse(pointage['date_pointage']);
         events.add(PointageEvent(datePointage: formatted));
       }
-    
     }
     await Future.delayed(const Duration(milliseconds: 400));
 
