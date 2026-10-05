@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../data/service/session_manager.dart';
 import '../auth/presentation/login_page.dart';
+import '../../data/models/pointage_models.dart';
+import '../../data/repositories/pointage_repository_provider.dart';
 
 Future<void> handleLogout(BuildContext context) async {
   final confirm = await showDialog<bool>(
@@ -61,8 +63,29 @@ Future<void> forceLogout(BuildContext context) async {
   }
 }
 
+/// Récupère le nom, le prénom et la société de l'employé connecté via le
+/// point d'accès des statistiques. Rien n'est stocké sur l'appareil.
+/// En cas d'erreur (pas de réseau, serveur indisponible...), renvoie null :
+/// le panneau affiche alors seulement l'identifiant AD.
+Future<EmployeStats?> _chargerIdentite() async {
+  try {
+    final now = DateTime.now();
+    // Le matricule n'est pas transmis : le serveur identifie l'employé
+    // grâce au jeton.
+    return await pointageRepository.getStatsEmploye(
+      '',
+      annee: now.year,
+      mois: now.month,
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
 Future<void> _showProfileSheet(BuildContext context) async {
   final identifiant = await SessionManager.getUsername();
+  // Lancé une seule fois, à l'ouverture du panneau
+  final identiteFuture = _chargerIdentite();
 
   if (!context.mounted) return;
 
@@ -80,20 +103,64 @@ Future<void> _showProfileSheet(BuildContext context) async {
           children: [
             const Icon(Icons.person, size: 40, color: AppColors.primaryGreen),
             const SizedBox(height: 10),
+            FutureBuilder<EmployeStats?>(
+              future: identiteFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Padding(
+                    padding: EdgeInsets.only(bottom: 16),
+                    child: SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
+                }
+                final identite = snapshot.data;
+                if (identite == null) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    children: [
+                      Text(
+                        '${identite.prenom} ${identite.nom}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        identite.societe,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textGrey,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
             const Text(
               'Identifiant AD',
               style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textGrey,
-                  fontWeight: FontWeight.w600),
+                fontSize: 12,
+                color: AppColors.textGrey,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               identifiant ?? '—',
               style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+              ),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -102,9 +169,11 @@ Future<void> _showProfileSheet(BuildContext context) async {
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(
-                      sheetContext); // ferme le panneau avec SON propre contexte
+                    sheetContext,
+                  ); // ferme le panneau avec SON propre contexte
                   handleLogout(
-                      context); // déconnecte avec le contexte de la page (toujours valide)
+                    context,
+                  ); // déconnecte avec le contexte de la page (toujours valide)
                 },
                 icon: const Icon(Icons.logout, size: 18),
                 label: const Text('Se déconnecter'),
@@ -112,7 +181,8 @@ Future<void> _showProfileSheet(BuildContext context) async {
                   backgroundColor: Colors.red,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25)),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
                 ),
               ),
             ),

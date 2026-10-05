@@ -6,6 +6,7 @@ import 'package:therefore_pointage/data/repositories/pointage_repository_provide
 import 'package:therefore_pointage/data/service/session_manager.dart';
 import 'package:therefore_pointage/data/session/session_expired_exception.dart';
 import 'package:therefore_pointage/features/dashboard/presentation/dashboard_body.dart';
+import 'package:therefore_pointage/features/shared/skeleton.dart';
 
 import 'helpers/fake_pointage_repository.dart';
 
@@ -64,5 +65,59 @@ void main() {
 
     expect(find.text('Authentification'), findsOneWidget);
     expect(await SessionManager.getToken(), isNull);
+  });
+
+  testWidgets('menu profil : prénom, nom, société et identifiant AD',
+      (tester) async {
+    FlutterSecureStorage.setMockInitialValues({
+      'auth_token': 'jeton-de-test',
+      'username': 'identifiant.test',
+    });
+    pointageRepository = FakePointageRepository();
+
+    await tester.pumpWidget(_ecran());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.person));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Employe TEST'), findsOneWidget);
+    expect(find.text('SOCIETE TEST'), findsOneWidget);
+    expect(find.text('identifiant.test'), findsOneWidget);
+    expect(find.text('Se déconnecter'), findsOneWidget);
+  });
+
+  testWidgets('menu profil sans réseau : seul l\'identifiant AD est affiché',
+      (tester) async {
+    FlutterSecureStorage.setMockInitialValues({
+      'auth_token': 'jeton-de-test',
+      'username': 'identifiant.test',
+    });
+    pointageRepository =
+        FakePointageRepository(erreur: const NoConnectionException());
+
+    await tester.pumpWidget(_ecran());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.person));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SOCIETE TEST'), findsNothing);
+    expect(find.text('identifiant.test'), findsOneWidget);
+    expect(find.text('Se déconnecter'), findsOneWidget);
+  });
+
+  testWidgets('pendant le chargement : squelette à la place du rond qui tourne',
+      (tester) async {
+    pointageRepository = FakePointageRepository();
+
+    await tester.pumpWidget(_ecran());
+    // Première image : les données ne sont pas encore arrivées
+    expect(find.byType(DashboardSkeleton), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    await tester.pumpAndSettle();
+    expect(find.byType(DashboardSkeleton), findsNothing);
+    expect(find.text('08:10:14'), findsOneWidget);
   });
 }

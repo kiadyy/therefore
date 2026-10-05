@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/rules/stat_rules.dart' as rules;
 import '../../../data/models/pointage_models.dart';
 import '../../../data/repositories/pointage_repository_provider.dart';
 import '../../../data/session/session_expired_exception.dart';
-import '../../shared/logout_action.dart';
 import '../../shared/error_state_view.dart';
-import '../../../core/rules/stat_rules.dart' as rules;
+import '../../shared/logout_action.dart';
+import '../../shared/skeleton.dart';
 
 class HistoryBody extends StatefulWidget {
   final String matricule;
@@ -35,11 +36,16 @@ class _HistoryBodyState extends State<HistoryBody> {
     _loadHistorique();
   }
 
-  Future<void> _loadHistorique() async {
-    setState(() {
-      _isLoading = true;
-      _lastError = null;
-    });
+  /// Charge l'historique de la période sélectionnée.
+  /// [silencieux] : utilisé par « tirer pour actualiser ». La liste reste
+  /// affichée pendant le rechargement, au lieu d'être remplacée par le squelette.
+  Future<void> _loadHistorique({bool silencieux = false}) async {
+    if (!silencieux) {
+      setState(() {
+        _isLoading = true;
+        _lastError = null;
+      });
+    }
 
     try {
       final events = await pointageRepository.getHistorique(
@@ -66,8 +72,9 @@ class _HistoryBodyState extends State<HistoryBody> {
             d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
         final pointages = parJour[key] ?? [];
 
-        jours.add(JourPointage(
-            date: d, pointages: pointages, estWeekend: estWeekend));
+        jours.add(
+          JourPointage(date: d, pointages: pointages, estWeekend: estWeekend),
+        );
       }
 
       jours.sort((a, b) => b.date.compareTo(a.date));
@@ -75,6 +82,7 @@ class _HistoryBodyState extends State<HistoryBody> {
       if (!mounted) return;
       setState(() {
         _jours = jours;
+        _lastError = null;
         _isLoading = false;
       });
     } catch (e) {
@@ -99,9 +107,9 @@ class _HistoryBodyState extends State<HistoryBody> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context)
-                .colorScheme
-                .copyWith(primary: AppColors.primaryGreen),
+            colorScheme: Theme.of(
+              context,
+            ).colorScheme.copyWith(primary: AppColors.primaryGreen),
           ),
           child: child!,
         );
@@ -150,7 +158,9 @@ class _HistoryBodyState extends State<HistoryBody> {
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 10),
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(20),
@@ -158,8 +168,11 @@ class _HistoryBodyState extends State<HistoryBody> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.date_range,
-                                  color: Colors.white, size: 20),
+                              const Icon(
+                                Icons.date_range,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                               const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
@@ -187,8 +200,11 @@ class _HistoryBodyState extends State<HistoryBody> {
                           color: Colors.white.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(Icons.restart_alt,
-                            color: Colors.white, size: 20),
+                        child: const Icon(
+                          Icons.restart_alt,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ],
@@ -200,19 +216,27 @@ class _HistoryBodyState extends State<HistoryBody> {
         ),
         Expanded(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const HistorySkeleton()
               : _lastError != null
                   ? ErrorStateView(error: _lastError!, onRetry: _loadHistorique)
                   : _jours.isEmpty
                       ? const Center(
-                          child: Text('Aucun pointage sur cette période.'))
-                      : ListView.separated(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _jours.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, index) =>
-                              _JourCard(jour: _jours[index]),
+                          child: Text('Aucun pointage sur cette période.'),
+                        )
+                      : RefreshIndicator(
+                          color: AppColors.primaryGreen,
+                          onRefresh: () => _loadHistorique(silencieux: true),
+                          child: ListView.separated(
+                            // Permet de tirer vers le bas même si la liste
+                            // est trop courte pour défiler
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _jours.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) =>
+                                _JourCard(jour: _jours[index]),
+                          ),
                         ),
         ),
       ],
@@ -232,7 +256,7 @@ class _JourCard extends StatelessWidget {
     'JEUDI',
     'VENDREDI',
     'SAMEDI',
-    'DIMANCHE'
+    'DIMANCHE',
   ];
 
   @override
@@ -270,6 +294,7 @@ class _JourCard extends StatelessWidget {
         cardBorder = Colors.red;
         badgeLabel = 'Absent';
     }
+
     // Durée travaillée : affichée si calculable, « — » si journée incomplète
     final duree = jour.dureeTravaillee;
     final String? dureeAffichee = duree != null
@@ -292,9 +317,10 @@ class _JourCard extends StatelessWidget {
               Text(
                 nomJour,
                 style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textGrey,
-                    fontWeight: FontWeight.w600),
+                  fontSize: 11,
+                  color: AppColors.textGrey,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               Row(
                 children: [
@@ -302,14 +328,19 @@ class _JourCard extends StatelessWidget {
                     width: 7,
                     height: 7,
                     decoration: BoxDecoration(
-                        color: badgeColor, shape: BoxShape.circle),
+                      color: badgeColor,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                   const SizedBox(width: 6),
-                  Text(badgeLabel,
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: badgeColor,
-                          fontWeight: FontWeight.w600)),
+                  Text(
+                    badgeLabel,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: badgeColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -371,7 +402,10 @@ class _TimeBadge extends StatelessWidget {
       child: Text(
         DateFormat('H:mm').format(time),
         style: const TextStyle(
-            color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

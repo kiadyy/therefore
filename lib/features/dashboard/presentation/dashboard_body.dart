@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
-import '../../../data/repositories/pointage_repository_provider.dart';
-import '../../shared/logout_action.dart';
-import '../../../data/session/session_expired_exception.dart';
 import '../../../core/rules/stat_rules.dart' as rules;
+import '../../../data/repositories/pointage_repository_provider.dart';
+import '../../../data/session/session_expired_exception.dart';
 import '../../shared/error_state_view.dart';
+import '../../shared/logout_action.dart';
+import '../../shared/skeleton.dart';
 
 const List<String> _moisNoms = [
   'Janvier',
@@ -56,11 +57,17 @@ class _DashboardBodyState extends State<DashboardBody> {
     _loadDashboardData();
   }
 
-  Future<void> _loadDashboardData() async {
-    setState(() {
-      _isLoading = true;
-      _lastError = null;
-    });
+  /// Charge les données du mois sélectionné.
+  /// [silencieux] : utilisé par « tirer pour actualiser ». Les cartes restent
+  /// affichées pendant le rechargement (l'indicateur de RefreshIndicator suffit),
+  /// au lieu d'être remplacées par le squelette.
+  Future<void> _loadDashboardData({bool silencieux = false}) async {
+    if (!silencieux) {
+      setState(() {
+        _isLoading = true;
+        _lastError = null;
+      });
+    }
 
     try {
       final pointageJour = await pointageRepository.getPointageDuJour(
@@ -91,6 +98,7 @@ class _DashboardBodyState extends State<DashboardBody> {
 
         _dureeMoyenneTravailH =
             rules.hmsToMinutes(stats.dureeMoyenneTravail) / 60;
+        _lastError = null;
         _isLoading = false;
       });
     } catch (e) {
@@ -135,9 +143,10 @@ class _DashboardBodyState extends State<DashboardBody> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Choisir le mois',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Text(
+                    'Choisir le mois',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -151,9 +160,13 @@ class _DashboardBodyState extends State<DashboardBody> {
                           }
                         }),
                       ),
-                      Text('$tempYear',
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w600)),
+                      Text(
+                        '$tempYear',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       IconButton(
                         icon: const Icon(Icons.chevron_right),
                         onPressed: canGoNextYear
@@ -236,8 +249,10 @@ class _DashboardBodyState extends State<DashboardBody> {
                 onTap: _openMonthPicker,
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -245,15 +260,19 @@ class _DashboardBodyState extends State<DashboardBody> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.calendar_month,
-                          color: Colors.white, size: 18),
+                      const Icon(
+                        Icons.calendar_month,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         '${_moisNoms[_selectedMonth - 1]} $_selectedYear',
                         style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13),
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
                       const Icon(Icons.arrow_drop_down, color: Colors.white),
                     ],
@@ -266,98 +285,114 @@ class _DashboardBodyState extends State<DashboardBody> {
         ),
         Expanded(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const DashboardSkeleton()
               : _lastError != null
                   ? ErrorStateView(
-                      error: _lastError!, onRetry: _loadDashboardData)
-                  : Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: _StatCard(
-                                    label: 'HEURE D\'ARRIVÉE',
-                                    value: _heureArrivee,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _StatCard(
-                                    label: 'HEURE DE DÉPART',
-                                    value: _heureDepart,
-                                  ),
-                                ),
-                              ],
+                      error: _lastError!,
+                      onRetry: _loadDashboardData,
+                    )
+                  : RefreshIndicator(
+                      color: AppColors.primaryGreen,
+                      onRefresh: () => _loadDashboardData(silencieux: true),
+                      // Le contenu garde exactement sa taille (les 3 rangées se
+                      // partagent la hauteur), tout en pouvant être « tiré »
+                      // vers le bas pour déclencher l'actualisation.
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: SizedBox(
+                              height: constraints.maxHeight,
+                              child: _buildCartes(),
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: _StatCard(
-                                    label: 'HEURE RÉALISÉE',
-                                    value:
-                                        '${_heureRealisee.toStringAsFixed(2)}h',
-                                    caption: 'Sur 184h (Jours ouvrables)',
-                                    showDot: false,
-                                    showProgressBar: true,
-                                    progressValue:
-                                        (_heureRealisee / 184).clamp(0, 1),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _StatCard(
-                                    label: 'CLASSEMENT RETARDS',
-                                    value: '$_nbRetards retard(s)',
-                                    caption: _classementTotal > 0
-                                        ? '${_classementIndex}e sur $_classementTotal (Département)'
-                                        : 'Pas de données',
-                                    dotColor: rules.classementColor(_nbRetards),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: _StatCard(
-                                    label: 'DURÉE MOYENNE RETARD',
-                                    value: _formatMinutesToHms(
-                                        _dureeMoyenneRetardMin),
-                                    caption: rules.dureeRetardLabel(
-                                        _dureeMoyenneRetardMin),
-                                    dotColor: rules.dureeRetardColor(
-                                        _dureeMoyenneRetardMin),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _StatCard(
-                                    label: 'DURÉE MOYENNE TRAVAIL',
-                                    value: _formatMinutesToHms(
-                                        _dureeMoyenneTravailH * 60),
-                                    caption: rules.dureeTravailLabel(
-                                        _dureeMoyenneTravailH),
-                                    dotColor: rules.dureeTravailColor(
-                                        _dureeMoyenneTravailH),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ),
         ),
       ],
+    );
+  }
+
+  /// Les 6 cartes du tableau de bord (disposition inchangée).
+  Widget _buildCartes() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    label: 'HEURE D\'ARRIVÉE',
+                    value: _heureArrivee,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _StatCard(
+                    label: 'HEURE DE DÉPART',
+                    value: _heureDepart,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    label: 'HEURE RÉALISÉE',
+                    value: '${_heureRealisee.toStringAsFixed(2)}h',
+                    caption: 'Sur 184h (Jours ouvrables)',
+                    showDot: false,
+                    showProgressBar: true,
+                    progressValue: (_heureRealisee / 184).clamp(0, 1),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _StatCard(
+                    label: 'CLASSEMENT RETARDS',
+                    value: '$_nbRetards retard(s)',
+                    caption: _classementTotal > 0
+                        ? '${_classementIndex}e sur $_classementTotal (Département)'
+                        : 'Pas de données',
+                    dotColor: rules.classementColor(_nbRetards),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    label: 'DURÉE MOYENNE RETARD',
+                    value: _formatMinutesToHms(_dureeMoyenneRetardMin),
+                    caption: rules.dureeRetardLabel(_dureeMoyenneRetardMin),
+                    dotColor: rules.dureeRetardColor(_dureeMoyenneRetardMin),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _StatCard(
+                    label: 'DURÉE MOYENNE TRAVAIL',
+                    value: _formatMinutesToHms(_dureeMoyenneTravailH * 60),
+                    caption: rules.dureeTravailLabel(_dureeMoyenneTravailH),
+                    dotColor: rules.dureeTravailColor(_dureeMoyenneTravailH),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -393,7 +428,9 @@ class _StatCard extends StatelessWidget {
         return Container(
           width: double.infinity,
           padding: EdgeInsets.symmetric(
-              horizontal: cardHeight * 0.06, vertical: cardHeight * 0.06),
+            horizontal: cardHeight * 0.06,
+            vertical: cardHeight * 0.06,
+          ),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(25),
@@ -440,7 +477,8 @@ class _StatCard extends StatelessWidget {
                     minHeight: 6,
                     backgroundColor: AppColors.fieldGrey,
                     valueColor: AlwaysStoppedAnimation(
-                        AppColors.progressColorFor(progressValue)),
+                      AppColors.progressColorFor(progressValue),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -455,8 +493,9 @@ class _StatCard extends StatelessWidget {
                         width: 7,
                         height: 7,
                         decoration: BoxDecoration(
-                            color: dotColor ?? AppColors.success,
-                            shape: BoxShape.circle),
+                          color: dotColor ?? AppColors.success,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                       const SizedBox(width: 6),
                     ],
@@ -465,8 +504,9 @@ class _StatCard extends StatelessWidget {
                         caption!,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                            fontSize: captionFontSize,
-                            color: AppColors.textGrey),
+                          fontSize: captionFontSize,
+                          color: AppColors.textGrey,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
