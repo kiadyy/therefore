@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/repositories/pointage_repository_provider.dart';
 import '../../../data/session/identite_courante.dart';
 import '../../../data/session/session_expired_exception.dart';
+import '../../shared/composants.dart';
 import '../../shared/error_state_view.dart';
 import '../../shared/logout_action.dart';
 import '../../shared/skeleton.dart';
@@ -257,7 +258,7 @@ class _DashboardBodyState extends State<DashboardBody> {
     if (_isLoading) {
       contenu = const DashboardSkeleton();
     } else if (_lastError != null) {
-      contenu = _Carte(
+      contenu = CarteBlanche(
         child: ErrorStateView(error: _lastError!, onRetry: _loadDashboardData),
       );
     } else {
@@ -271,11 +272,15 @@ class _DashboardBodyState extends State<DashboardBody> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.zero,
         children: [
-          _EnTete(
-            prenom: _prenom,
-            societe: _societe,
-            periode: '${_moisNoms[_selectedMonth - 1]} $_selectedYear',
-            onChoisirPeriode: _openMonthPicker,
+          EnTeteVert(
+            titre: _prenom.isEmpty ? 'Bonjour' : 'Bonjour, $_prenom',
+            sousTitre: _societe,
+            controles: PastilleEnTete(
+              icone: Icons.calendar_month_rounded,
+              libelle: '${_moisNoms[_selectedMonth - 1]} $_selectedYear',
+              chevron: true,
+              onTap: _openMonthPicker,
+            ),
           ),
           // Les cartes remontent sur l'en-tête vert (effet de superposition)
           Transform.translate(
@@ -298,7 +303,7 @@ class _DashboardBodyState extends State<DashboardBody> {
     return Column(
       children: [
         // Carte principale : heures réalisées
-        _Carte(
+        CarteBlanche(
           child: Row(
             children: [
               _AnneauProgression(valeur: progression),
@@ -331,7 +336,7 @@ class _DashboardBodyState extends State<DashboardBody> {
         const SizedBox(height: AppDimens.gap),
 
         // Horaires d'arrivée et de départ
-        _Carte(
+        CarteBlanche(
           child: Row(
             children: [
               Expanded(
@@ -410,165 +415,6 @@ class _DashboardBodyState extends State<DashboardBody> {
   return (fond: AppColors.primaryTint, encre: AppColors.primaryGreen);
 }
 
-class _EnTete extends StatelessWidget {
-  final String prenom;
-  final String societe;
-  final String periode;
-  final VoidCallback onChoisirPeriode;
-
-  const _EnTete({
-    required this.prenom,
-    required this.societe,
-    required this.periode,
-    required this.onChoisirPeriode,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 76),
-      decoration: const BoxDecoration(
-        color: AppColors.primaryGreen,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      prenom.isEmpty ? 'Bonjour' : 'Bonjour, $prenom',
-                      style: AppText.titre.copyWith(color: Colors.white),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (societe.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        societe,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xE0FFFFFF),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              const ProfileIconButton(),
-            ],
-          ),
-          const SizedBox(height: 18),
-          _PastillePeriode(libelle: periode, onTap: onChoisirPeriode),
-        ],
-      ),
-    );
-  }
-}
-
-/// Bouton-pastille du filtre de période, dans l'en-tête vert.
-class _PastillePeriode extends StatelessWidget {
-  final String libelle;
-  final VoidCallback onTap;
-
-  const _PastillePeriode({required this.libelle, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0x29FFFFFF),
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Container(
-          height: 40,
-          padding: const EdgeInsets.only(left: 12, right: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.calendar_month_rounded,
-                color: Colors.white,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                libelle,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Carte blanche aux coins arrondis, base de tous les blocs de l'écran.
-class _Carte extends StatelessWidget {
-  final Widget child;
-
-  const _Carte({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: child,
-    );
-  }
-}
-
-/// Icône dans un carré aux coins arrondis, sur fond teinté.
-class _IconeTuile extends StatelessWidget {
-  final IconData icone;
-  final Color fond;
-  final Color encre;
-
-  const _IconeTuile({
-    required this.icone,
-    this.fond = AppColors.primaryTint,
-    this.encre = AppColors.primaryGreen,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: fond,
-        borderRadius: BorderRadius.circular(AppDimens.radiusIcon),
-      ),
-      child: Icon(icone, size: 21, color: encre),
-    );
-  }
-}
-
 /// Anneau de progression des heures réalisées, animé une seule fois à
 /// l'arrivée des données (animation désactivée si le téléphone le demande).
 class _AnneauProgression extends StatelessWidget {
@@ -643,7 +489,7 @@ class _ValeurAvecIcone extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _IconeTuile(icone: icone),
+        IconeTuile(icone: icone),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -685,13 +531,13 @@ class _CarteRetards extends StatelessWidget {
     final position =
         total > 1 ? ((rang - 1) / (total - 1)).clamp(0.0, 1.0) : 0.0;
 
-    return _Carte(
+    return CarteBlanche(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              _IconeTuile(
+              IconeTuile(
                 icone: Icons.leaderboard_rounded,
                 fond: teinte.fond,
                 encre: teinte.encre,
@@ -797,11 +643,11 @@ class _TuileDuree extends StatelessWidget {
   Widget build(BuildContext context) {
     final teinte = _teintePour(couleur);
 
-    return _Carte(
+    return CarteBlanche(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _IconeTuile(icone: icone, fond: teinte.fond, encre: teinte.encre),
+          IconeTuile(icone: icone, fond: teinte.fond, encre: teinte.encre),
           const SizedBox(height: 12),
           Text(libelle, style: AppText.libelle),
           FittedBox(
@@ -813,27 +659,10 @@ class _TuileDuree extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: teinte.fond,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: couleur,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(appreciation, style: AppText.pastille),
-              ],
-            ),
+          PastilleStatut(
+            texte: appreciation,
+            point: couleur,
+            fond: teinte.fond,
           ),
         ],
       ),

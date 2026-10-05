@@ -19,7 +19,7 @@ class TherefereApp extends StatelessWidget {
       title: 'Therefore',
       debugShowCheckedModeBanner: false,
       routes: {
-        '/dashboard': (context) => MainShell(),
+        '/dashboard': (context) => const MainShell(),
       },
       theme: AppTheme.light,
       home: FutureBuilder<_StartupState>(
@@ -32,7 +32,7 @@ class TherefereApp extends StatelessWidget {
           final state = snapshot.data!;
           if (!state.loggedIn) return const LoginPage();
           if (state.biometricRequired) {
-            return BiometricLockScreen(child: const MainShell());
+            return const BiometricLockScreen(child: MainShell());
           }
           return const MainShell();
         },

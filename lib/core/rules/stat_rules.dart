@@ -86,3 +86,22 @@ String libelleRetards(int nombre) =>
 
 /// Rang en français : « 1er », « 2e », « 7e ».
 String libelleRang(int rang) => rang == 1 ? '1er' : '${rang}e';
+
+/// Accord simple au pluriel : « 1 complet », « 3 complets », « 0 absent ».
+String accord(int nombre, String mot) =>
+    nombre <= 1 ? '$nombre $mot' : '$nombre ${mot}s';
+
+/// Durée courte pour le graphique : « 8h05 ».
+String formatDureeCourt(Duration duree) {
+  final minutes = duree.inMinutes.remainder(60);
+  return '${duree.inHours}h${minutes.toString().padLeft(2, '0')}';
+}
+
+/// Position d'une heure sur la frise de la journée, qui va de 7 h à 19 h :
+/// 0 = 7 h, 1 = 19 h. Les heures en dehors sont ramenées aux bords.
+double fractionFrise(DateTime heure) {
+  const debut = 7 * 60;
+  const amplitude = 12 * 60;
+  final minutes = heure.hour * 60 + heure.minute;
+  return ((minutes - debut) / amplitude).clamp(0.0, 1.0);
+}

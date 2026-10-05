@@ -166,49 +166,102 @@ class DashboardSkeleton extends StatelessWidget {
   }
 }
 
-/// Squelette de l'historique : quelques cartes de jour avec la même forme
-/// que les vraies (nom du jour, statut, date, pastilles d'horaires).
+/// Squelette de l'écran Pointage : résumé, graphique et cartes de jour,
+/// avec les mêmes formes et le même rayon que le contenu réel.
 class HistorySkeleton extends StatelessWidget {
   const HistorySkeleton({super.key});
+
+  Widget _carte({required double hauteur, required Widget child}) {
+    return Container(
+      height: hauteur,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _jour() {
+    return _carte(
+      hauteur: 108,
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SkeletonBlock(width: 40, height: 40), // date
+          SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBlock(width: 90, height: 12), // statut
+                SizedBox(height: 12),
+                SkeletonBlock(height: 10), // frise
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    SkeletonBlock(width: 44, height: 20),
+                    SizedBox(width: 6),
+                    SkeletonBlock(width: 44, height: 20),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return SkeletonPulse(
-      child: ListView.separated(
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        itemCount: 5,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (_, __) => Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: AppColors.cardBorder, width: 1.2),
+      child: Column(
+        children: [
+          // Résumé de la période
+          _carte(
+            hauteur: 118,
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBlock(width: 170, height: 12),
+                SizedBox(height: 10),
+                SkeletonBlock(width: 120, height: 30),
+                Spacer(),
+                Row(
+                  children: [
+                    SkeletonBlock(width: 86, height: 24),
+                    SizedBox(width: 8),
+                    SkeletonBlock(width: 86, height: 24),
+                    SizedBox(width: 8),
+                    SkeletonBlock(width: 70, height: 24),
+                  ],
+                ),
+              ],
+            ),
           ),
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  SkeletonBlock(width: 70, height: 10), // nom du jour
-                  SkeletonBlock(width: 60, height: 10), // statut
-                ],
-              ),
-              SizedBox(height: 8),
-              SkeletonBlock(width: 120, height: 18), // date
-              SizedBox(height: 12),
-              Row(
-                children: [
-                  SkeletonBlock(width: 44, height: 20), // horaire
-                  SizedBox(width: 8),
-                  SkeletonBlock(width: 44, height: 20), // horaire
-                ],
-              ),
-            ],
+          const SizedBox(height: 12),
+          // Graphique
+          _carte(
+            hauteur: 200,
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBlock(width: 160, height: 12),
+                Spacer(),
+                SkeletonBlock(height: 100),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: 12),
+          _jour(),
+          const SizedBox(height: 12),
+          _jour(),
+          const SizedBox(height: 12),
+          _jour(),
+        ],
       ),
     );
   }

@@ -4,17 +4,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:therefore_pointage/data/models/pointage_models.dart';
 import 'package:therefore_pointage/data/network/network_exceptions.dart';
 import 'package:therefore_pointage/data/repositories/pointage_repository_provider.dart';
+import 'package:therefore_pointage/data/session/identite_courante.dart';
 import 'package:therefore_pointage/data/session/session_expired_exception.dart';
 import 'package:therefore_pointage/features/history/presentation/history_body.dart';
+import 'package:therefore_pointage/features/shared/skeleton.dart';
 
 import 'helpers/fake_pointage_repository.dart';
 
 Widget _ecran() => const MaterialApp(home: Scaffold(body: HistoryBody()));
 
-/// Agrandit l'écran de test pour que les 7 cartes soient toutes affichées
-/// (une liste n'affiche que les éléments visibles).
+/// Agrandit l'écran de test pour que tout le contenu soit affiché.
 void _agrandirEcran(WidgetTester tester) {
-  tester.view.physicalSize = const Size(800, 2400);
+  tester.view.physicalSize = const Size(800, 2600);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 }
@@ -37,9 +38,11 @@ DateTime _heure(DateTime jour, int h, int m) =>
 void main() {
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({'auth_token': 'jeton-de-test'});
+    IdentiteCourante.effacer();
   });
 
-  testWidgets('statuts des journées et horaires pointés', (tester) async {
+  testWidgets('statuts, horaires, durées et résumé de la période',
+      (tester) async {
     _agrandirEcran(tester);
 
     // Sur 7 jours consécutifs, il y a toujours exactement 1 samedi et 1 dimanche
@@ -58,16 +61,28 @@ void main() {
     await tester.pumpWidget(_ecran());
     await tester.pumpAndSettle();
 
+    // Statuts des cartes de jour
     expect(find.text('Complet'), findsOneWidget); // 4 pointages
     expect(find.text('Incomplet'), findsOneWidget); // 1 pointage
-    expect(find.text('Weekend'), findsNWidgets(2));
+    expect(find.text('Week-end'), findsNWidgets(2));
     expect(find.text('Absent'), findsNWidgets(3)); // 5 jours ouvrés - 2
 
+    // Horaires pointés
     for (final h in ['8:00', '12:00', '13:00', '17:05', '8:30']) {
       expect(find.text(h), findsOneWidget);
     }
-    expect(find.text('8 h 05'), findsOneWidget); // 4 h 00 + 4 h 05
-    expect(find.text('—'), findsOneWidget); // journée incomplète
+
+    // Durée : sur la carte du jour ET dans le total de la période
+    expect(find.text('8 h 05'), findsNWidgets(2));
+    // Durée courte sur le graphique
+    expect(find.text('8h05'), findsOneWidget);
+    // Journée incomplète : « — » sur la carte et sur le graphique
+    expect(find.text('—'), findsNWidgets(2));
+
+    // Résumé de la période
+    expect(find.text('1 complet'), findsOneWidget);
+    expect(find.text('1 incomplet'), findsOneWidget);
+    expect(find.text('3 absents'), findsOneWidget);
   });
 
   testWidgets(
@@ -89,7 +104,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Le serveur ne répond pas'), findsNothing);
-    expect(find.text('Weekend'), findsNWidgets(2));
+    expect(find.text('Week-end'), findsNWidgets(2));
   });
 
   testWidgets('jeton refusé (401) : retour à l\'écran de connexion',
@@ -101,5 +116,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Authentification'), findsOneWidget);
+  });
+
+  testWidgets('pendant le chargement : squelette de l\'écran pointage',
+      (tester) async {
+    pointageRepository = FakePointageRepository();
+
+    await tester.pumpWidget(_ecran());
+    expect(find.byType(HistorySkeleton), findsOneWidget);
+
+    await tester.pumpAndSettle();
+    expect(find.byType(HistorySkeleton), findsNothing);
   });
 }
