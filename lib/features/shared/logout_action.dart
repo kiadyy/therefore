@@ -4,7 +4,6 @@ import '../../core/constants/app_colors.dart';
 import '../../data/service/session_manager.dart';
 import '../auth/presentation/login_page.dart';
 
-
 Future<void> handleLogout(BuildContext context) async {
   final confirm = await showDialog<bool>(
     context: context,
@@ -35,23 +34,32 @@ Future<void> handleLogout(BuildContext context) async {
   );
 }
 
+// Empêche deux déconnexions simultanées (tableau de bord et historique
+// peuvent recevoir un 401 en même temps au démarrage)
+bool _deconnexionEnCours = false;
 
 Future<void> forceLogout(BuildContext context) async {
-  await SessionManager.clearSession();
+  if (_deconnexionEnCours) return;
+  _deconnexionEnCours = true;
 
-  if (!context.mounted) return;
+  try {
+    await SessionManager.clearSession();
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-        content: Text('Votre session a expiré. Veuillez vous reconnecter.')),
-  );
+    if (!context.mounted) return;
 
-  Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const LoginPage()),
-    (route) => false,
-  );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+          content: Text('Votre session a expiré. Veuillez vous reconnecter.')),
+    );
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  } finally {
+    _deconnexionEnCours = false;
+  }
 }
-
 
 Future<void> _showProfileSheet(BuildContext context) async {
   final identifiant = await SessionManager.getUsername();
@@ -65,7 +73,6 @@ Future<void> _showProfileSheet(BuildContext context) async {
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     builder: (sheetContext) {
-      
       return Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -115,7 +122,6 @@ Future<void> _showProfileSheet(BuildContext context) async {
     },
   );
 }
-
 
 class ProfileIconButton extends StatelessWidget {
   const ProfileIconButton({super.key});

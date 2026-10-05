@@ -177,13 +177,12 @@ class MockPointageRepository implements PointageRepository {
     required DateTime debut,
     required DateTime fin,
   }) async {
-    final events = <PointageEvent>[];
     final token = await SessionManager.getToken();
-    final date_debut = DateFormat('yyyy-MM-dd').format(debut);
-    final date_fin = DateFormat('yyyy-MM-dd').format(fin);
+    final dateDebut = DateFormat('yyyy-MM-dd').format(debut);
+    final dateFin = DateFormat('yyyy-MM-dd').format(fin);
     final url = Uri.parse(
       'https://pointeuse-backend.inviso-group.mg/presence/historique'
-      '?date_debut=$date_debut&date_fin=$date_fin',
+      '?date_debut=$dateDebut&date_fin=$dateFin',
     );
     final response = await networkGuard(() => http.get(
           url,
@@ -192,16 +191,25 @@ class MockPointageRepository implements PointageRepository {
             'Accept': 'application/json',
           },
         ));
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
+      final events = <PointageEvent>[];
       for (var pointage in data) {
         DateTime formatted =
             DateFormat('yyyy-MM-dd HH:mm:ss').parse(pointage['date_pointage']);
         events.add(PointageEvent(datePointage: formatted));
       }
+      return events;
+    } else if (response.statusCode == 401) {
+      // Token expiré ou invalide : déclenche la déconnexion automatique
+      throw const SessionExpiredException();
+    } else {
+      // Ne jamais renvoyer une liste vide en cas d'erreur :
+      // l'écran afficherait à tort tous les jours en « Absent »
+      throw Exception(
+        'Erreur lors de la récupération de l\'historique (${response.statusCode})',
+      );
     }
-    await Future.delayed(const Duration(milliseconds: 400));
-
-    return events;
   }
 }

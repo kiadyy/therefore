@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- Nécessaire en release : sans elle, aucun appel API ne fonctionne dans l'APK -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="Therefore"
         android:name="${applicationName}"
