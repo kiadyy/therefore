@@ -1,12 +1,13 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:convert';
+
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../../core/constants/app_colors.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../data/service/session_manager.dart';
 
+import '../../../core/constants/app_colors.dart';
+import '../../../data/network/network_exceptions.dart';
+import '../../../data/repositories/pointage_repository.dart' show networkGuard;
+import '../../../data/service/session_manager.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -30,7 +31,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+    Future<void> _handleLogin() async {
     FocusScope.of(context).unfocus();
 
     if (!_formKey.currentState!.validate()) return;
@@ -49,38 +50,59 @@ class _LoginPageState extends State<LoginPage> {
       final identifiant = 'SMTP-GROUP\\$username';
       final credentials = base64Encode(utf8.encode('$identifiant:$password'));
 
-      final responseTherefore = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Basic $credentials',
-        },
-        body: jsonEncode({}),
-      );
+      final responseTherefore = await networkGuard(() => http.post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': 'Basic $credentials',
+            },
+            body: jsonEncode({}),
+          ));
 
       if (responseTherefore.statusCode == 200) {
-        // Succès de la connexion
         final data = jsonDecode(responseTherefore.body);
         final token = data['JWTToken'];
-        if (token != null) {
-          await SessionManager.saveSession(token, username: username);
+
+        // Sans jeton, on ne doit jamais entrer dans l'application :
+        // toutes les requêtes suivantes échoueraient en 401.
+        if (token == null || token.toString().isEmpty) {
+          if (!mounted) return;
+          setState(() {
+            _errorMessage = 'Réponse inattendue du serveur, réessaie.';
+          });
+          return;
         }
+
+        await SessionManager.saveSession(token.toString(), username: username);
 
         if (!mounted) return;
         Navigator.of(context).pushReplacementNamed('/dashboard');
       } else {
+        if (!mounted) return;
         setState(() {
-          _errorMessage = "Identifiant ou mot de passe incorrect.";
+          _errorMessage = 'Identifiant ou mot de passe incorrect.';
         });
       }
-    } on AuthException catch (e) {
+    } on NoConnectionException {
+      if (!mounted) return;
       setState(() {
-        _errorMessage = "Identifiant ou mot de passe incorrect.";
+        _errorMessage = 'Pas de connexion internet. Vérifie ton réseau.';
       });
-    } catch (e) {
+        } on ServerUnavailableException catch (e) {
+      if (!mounted) return;
       setState(() {
-        _errorMessage = "Une erreur est survenue,réessaie";
+        // Le serveur a répondu avec un code 5xx : c'est ce qu'il renvoie
+        // quand l'authentification est refusée, on garde donc le message
+        // d'avant. Sans code (délai dépassé), le serveur ne répond vraiment pas.
+        _errorMessage = e.statusCode != null
+            ? 'Identifiant ou mot de passe incorrect.'
+            : 'Le serveur ne répond pas. Réessaie dans quelques instants.';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Une erreur est survenue, réessaie.';
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
