@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +8,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../data/network/network_exceptions.dart';
 import '../../../data/repositories/pointage_repository.dart' show networkGuard;
 import '../../../data/service/session_manager.dart';
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -31,7 +32,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-    Future<void> _handleLogin() async {
+  Future<void> _handleLogin() async {
     FocusScope.of(context).unfocus();
 
     if (!_formKey.currentState!.validate()) return;
@@ -89,7 +90,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _errorMessage = 'Pas de connexion internet. Vérifie ton réseau.';
       });
-        } on ServerUnavailableException catch (e) {
+    } on ServerUnavailableException catch (e) {
       if (!mounted) return;
       setState(() {
         // Le serveur a répondu avec un code 5xx : c'est ce qu'il renvoie

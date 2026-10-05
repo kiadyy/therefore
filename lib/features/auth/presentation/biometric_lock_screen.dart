@@ -55,7 +55,10 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
               const SizedBox(height: 20),
               const Text(
                 'Déverrouillage requis',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark),
               ),
               const SizedBox(height: 8),
               if (_checking)
@@ -67,7 +70,9 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                 if (_error != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(_error!, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
+                    child: Text(_error!,
+                        style: const TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center),
                   ),
                 ElevatedButton.icon(
                   onPressed: _tryUnlock,
@@ -76,7 +81,8 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryGreen,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25)),
                   ),
                 ),
               ],

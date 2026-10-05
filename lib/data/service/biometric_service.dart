@@ -28,8 +28,10 @@ class BiometricService {
       return await _auth.authenticate(
         localizedReason: 'Confirmez votre identité pour accéder à Therefore',
         options: const AuthenticationOptions(
-          biometricOnly: false, // autorise le repli sur le code PIN du téléphone
-          stickyAuth: true, // ne réinitialise pas la demande si l'app passe en arrière-plan
+          biometricOnly:
+              false, // autorise le repli sur le code PIN du téléphone
+          stickyAuth:
+              true, // ne réinitialise pas la demande si l'app passe en arrière-plan
         ),
       );
     } catch (_) {

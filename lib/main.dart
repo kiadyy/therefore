@@ -35,7 +35,8 @@ class TherefereApp extends StatelessWidget {
         future: _resolveStartupState(),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            return const Scaffold(
+                body: Center(child: CircularProgressIndicator()));
           }
           final state = snapshot.data!;
           if (!state.loggedIn) return const LoginPage();
@@ -57,7 +58,9 @@ class _StartupState {
 
 Future<_StartupState> _resolveStartupState() async {
   final loggedIn = await SessionManager.isLoggedIn();
-  if (!loggedIn) return _StartupState(loggedIn: false, biometricRequired: false);
+    if (!loggedIn) {
+    return _StartupState(loggedIn: false, biometricRequired: false);
+  }
 
   // Le verrou biométrique n'est activé que si l'appareil le supporte réellement
   // (capteur présent + empreinte/visage déjà enregistré sur ce téléphone).

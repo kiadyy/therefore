@@ -4,7 +4,8 @@ class PointageJour {
   final int annee;
   final int mois;
 
-  PointageJour({this.entree, this.sortie, required this.annee, required this.mois});
+  PointageJour(
+      {this.entree, this.sortie, required this.annee, required this.mois});
 
   factory PointageJour.fromJson(Map<String, dynamic> json) => PointageJour(
         entree: json['entree'] as String?,

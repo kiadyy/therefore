@@ -56,18 +56,6 @@ class _DashboardBodyState extends State<DashboardBody> {
     _loadDashboardData();
   }
 
-  double _hmsToMinutes(String value) {
-    final parts = value.split(':');
-
-    if (parts.length != 3) return 0;
-
-    final heures = double.tryParse(parts[0]) ?? 0;
-    final minutes = double.tryParse(parts[1]) ?? 0;
-    final secondes = double.tryParse(parts[2]) ?? 0;
-
-    return heures * 60 + minutes + secondes / 60;
-  }
-
   Future<void> _loadDashboardData() async {
     setState(() {
       _isLoading = true;
@@ -99,9 +87,10 @@ class _DashboardBodyState extends State<DashboardBody> {
         _nbRetards = stats.nbRetards;
         _classementIndex = stats.classementIndex;
         _classementTotal = stats.classementTotal;
-        _dureeMoyenneRetardMin = _hmsToMinutes(stats.dureeMoyenneRetard);
+        _dureeMoyenneRetardMin = rules.hmsToMinutes(stats.dureeMoyenneRetard);
 
-        _dureeMoyenneTravailH = _hmsToMinutes(stats.dureeMoyenneTravail) / 60;
+        _dureeMoyenneTravailH =
+            rules.hmsToMinutes(stats.dureeMoyenneTravail) / 60;
         _isLoading = false;
       });
     } catch (e) {

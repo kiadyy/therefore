@@ -22,10 +22,12 @@ class ErrorStateView extends StatelessWidget {
       message = 'Pas de connexion internet.\nVérifie ton réseau et réessaie.';
     } else if (error is ServerUnavailableException) {
       icon = Icons.cloud_off;
-      message = 'Le serveur ne répond pas pour le moment.\nRéessaie dans quelques instants.';
+      message =
+          'Le serveur ne répond pas pour le moment.\nRéessaie dans quelques instants.';
     } else {
       icon = Icons.error_outline;
-      message = 'Une erreur est survenue.\nRéessaie, ou contacte le support si ça persiste.';
+      message =
+          'Une erreur est survenue.\nRéessaie, ou contacte le support si ça persiste.';
     }
 
     return Center(
@@ -36,7 +38,9 @@ class ErrorStateView extends StatelessWidget {
           children: [
             Icon(icon, size: 48, color: AppColors.textGrey),
             const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textGrey)),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textGrey)),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: onRetry,
@@ -45,7 +49,8 @@ class ErrorStateView extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryGreen,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25)),
               ),
             ),
           ],

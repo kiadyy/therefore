@@ -14,7 +14,7 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  // 0 = pointage (dashboard du jour), 1 = statistique (historique)
+  // 0 = Statistique (tableau de bord du mois), 1 = pointage (historique)
   int _selectedTab = 0;
 
   @override
@@ -82,7 +82,6 @@ class _TabButton extends StatelessWidget {
     return SizedBox(
       height: 52,
       child: ElevatedButton.icon(
-        
         onPressed: isActive ? null : onTap,
         icon: Icon(icon, size: 18),
         label: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),

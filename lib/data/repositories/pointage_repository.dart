@@ -21,10 +21,6 @@ abstract class PointageRepository {
     required DateTime fin,
   });
 }
-// À ajouter en haut de pointage_repository.dart :
-// import 'dart:async';
-// import 'dart:io';
-// import '../network/network_exceptions.dart';
 
 /// Enveloppe un appel réseau : convertit les erreurs bas niveau (pas de
 /// connexion, délai dépassé, erreur serveur) en exceptions dédiées que
@@ -53,7 +49,7 @@ Future<http.Response> networkGuard(
   // telles quelles, elles sont déjà gérées ailleurs (ex: SessionExpiredException).
 }
 
-class MockPointageRepository implements PointageRepository {
+class ApiPointageRepository implements PointageRepository {
   @override
   Future<PointageJour> getPointageDuJour(
     String matricule, {
