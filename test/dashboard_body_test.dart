@@ -41,6 +41,8 @@ void main() {
     expect(find.text('82 %'), findsOneWidget); // 150,66 / 184
     expect(find.text('08:10:14'), findsOneWidget); // arrivée
     expect(find.text('17:32:27'), findsOneWidget); // départ
+    expect(find.text('Arrivée moyenne'), findsOneWidget);
+    expect(find.text('Départ moyen'), findsOneWidget);
     expect(find.text('2 retards'), findsOneWidget);
     expect(find.text('7e sur 10'), findsOneWidget);
     expect(find.text('01:42:14'), findsOneWidget); // retard moyen

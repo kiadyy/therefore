@@ -342,7 +342,7 @@ class _DashboardBodyState extends State<DashboardBody> {
               Expanded(
                 child: _ValeurAvecIcone(
                   icone: Icons.login_rounded,
-                  libelle: 'Arrivée',
+                  libelle: 'Arrivée moyenne',
                   valeur: _heureArrivee,
                 ),
               ),
@@ -350,7 +350,7 @@ class _DashboardBodyState extends State<DashboardBody> {
               Expanded(
                 child: _ValeurAvecIcone(
                   icone: Icons.logout_rounded,
-                  libelle: 'Départ',
+                  libelle: 'Départ moyen',
                   valeur: _heureDepart,
                 ),
               ),
